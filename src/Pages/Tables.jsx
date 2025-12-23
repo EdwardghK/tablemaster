@@ -1,1 +1,171 @@
-export { default } from "../Pages/Tables.jsx";
+import React, { useState, useEffect } from 'react';
+import Header from '@/components/common/Header';
+import BottomNav from '@/components/common/BottomNav';
+import TableCard from '@/components/common/tables/TableCard.jsx';
+import EditTableModal from '@/components/modals/EditTableModal';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Plus, Search } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { TableStorage } from '@/api/localStorageHelpers/tables';
+import { GuestStorage } from '@/api/localStorageHelpers/guests';
+import { OrderStorage } from '@/api/localStorageHelpers/orders';
+
+export default function Tables() {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [editModal, setEditModal] = useState({ open: false, table: null });
+  
+  const [tables, setTables] = useState([]);
+  const [guests, setGuests] = useState([]);
+  const [orderItems, setOrderItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Load tables, guests, orders from localStorage
+  useEffect(() => {
+    setLoading(true);
+    const t = TableStorage.getAllTables();
+    const g = GuestStorage.getAllGuests();
+    const o = OrderStorage.getAllOrderItems();
+    setTables(t);
+    setGuests(g);
+    setOrderItems(o);
+    setLoading(false);
+  }, []);
+
+  const filteredTables = tables.filter(table => {
+    const matchesSearch = table.table_number?.toString().toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          table.section?.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesSearch;
+  }).sort((a, b) => (a.table_number || '').localeCompare(b.table_number || '', undefined, { numeric: true, sensitivity: 'base' }));
+
+  const getTableOrderCount = (tableId) => {
+    const tableGuests = guests.filter(g => g.table_id === tableId);
+    const guestIds = tableGuests.map(g => g.id);
+    return orderItems.filter(item => guestIds.includes(item.guest_id)).length;
+  };
+
+  const tableHasAllergens = (tableId) => {
+    const tableGuests = guests.filter(g => g.table_id === tableId);
+    return tableGuests.some(g => (g.allergens?.length > 0 || g.custom_allergens?.length > 0));
+  };
+
+  const handleSaveTable = (tableData) => {
+    try {
+      const payload = {
+        ...tableData,
+        guest_count: Number.isFinite(Number(tableData.guest_count)) ? Number(tableData.guest_count) : 0,
+        status: tableData.status || 'available',
+      };
+      let savedTable;
+      if (payload.id) {
+        TableStorage.updateTable(payload.id, payload);
+        savedTable = payload;
+      } else {
+        savedTable = TableStorage.createTable(payload);
+      }
+      setTables(TableStorage.getAllTables());
+      return savedTable;
+    } catch (err) {
+      console.error('Failed to save table:', err);
+      window.alert(err?.message || 'Could not save table');
+      throw err;
+    }
+  };
+
+  const handleCreateGuests = (table, guestCount) => {
+    for (let i = 1; i <= guestCount; i++) {
+      GuestStorage.createGuest({
+        table_id: table.id,
+        guest_number: i,
+      });
+    }
+    setGuests(GuestStorage.getAllGuests());
+  };
+
+  const handleDeleteTable = (table) => {
+    const confirmed = window.confirm(`Delete table ${table.table_number || ''}?`);
+    if (!confirmed) return;
+    TableStorage.deleteTable(table.id);
+    // Clean up guests/orders linked to this table
+    setGuests((prev) => prev.filter((g) => g.table_id !== table.id));
+    setOrderItems((prev) => prev.filter((o) => o.table_id !== table.id));
+    setTables(TableStorage.getAllTables());
+  };
+
+  return (
+    <div className="min-h-screen bg-stone-50 pb-24">
+      <Header title="TableMaster" />
+
+      {/* Search & Filters (with Add button) */}
+      <div className="px-4 py-3 bg-white border-b border-stone-100">
+        <div className="flex items-center justify-between gap-4 mb-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-400" />
+            <Input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search tables..."
+              className="pl-10 rounded-xl bg-stone-50 border-stone-200"
+            />
+          </div>
+
+          <div>
+            <Button 
+              onClick={() => setEditModal({ open: true, table: {} })}
+              size="sm"
+              className="bg-amber-700 hover:bg-amber-800 rounded-lg"
+            >
+              <Plus className="h-4 w-4 mr-1" /> Add
+            </Button>
+          </div>
+        </div>
+
+      </div>
+
+      {/* Tables Grid */}
+      <div className="p-4 space-y-6">
+        {loading ? (
+          <div className="grid grid-cols-2 gap-3">
+            {[...Array(6)].map((_, i) => (
+              <Skeleton key={i} className="h-40 rounded-2xl" />
+            ))}
+          </div>
+        ) : (
+          <div>
+            <div className="grid grid-cols-2 gap-3">
+              {filteredTables.map(table => (
+                <TableCard 
+                  key={table.id} 
+                  table={table}
+                  orderCount={getTableOrderCount(table.id)}
+                  hasAllergens={tableHasAllergens(table.id)}
+                  onDelete={handleDeleteTable}
+                />
+              ))}
+            </div>
+            {filteredTables.length === 0 && (
+              <div className="text-center py-12">
+                <Button
+                  onClick={() => setEditModal({ open: true, table: {} })}
+                  className="bg-amber-700 hover:bg-amber-800 rounded-2xl px-6 py-4 text-base"
+                >
+                  Create New Table
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      <EditTableModal
+        open={editModal.open}
+        onClose={() => setEditModal({ open: false, table: null })}
+        table={editModal.table}
+        onSave={handleSaveTable}
+        onCreateGuests={handleCreateGuests}
+      />
+
+      <BottomNav />
+    </div>
+  );
+}
