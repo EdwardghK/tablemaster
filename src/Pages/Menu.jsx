@@ -3,7 +3,7 @@ import Header from "@/components/common/Header";
 import BottomNav from "@/components/common/BottomNav";
 import { cn } from "@/utils";
 import { AppContext } from "@/context/AppContext.jsx";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/Button";
 import { Plus, Trash2, Pencil } from "lucide-react";
 import AllergenBadge, { COMMON_ALLERGENS } from "@/components/common/AllergenBadge";
 import {
