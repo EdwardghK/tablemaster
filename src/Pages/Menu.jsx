@@ -50,6 +50,7 @@ export default function MenuPage() {
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [itemModal, setItemModal] = useState({ open: false, item: null });
   const [detailModal, setDetailModal] = useState({ open: false, item: null });
+  const [unavailableMap, setUnavailableMap] = useState({});
   const [form, setForm] = useState({
     name: "",
     price: "",
@@ -63,6 +64,8 @@ export default function MenuPage() {
   const loadMenu = async () => {
     try {
       const items = await MenuStorage.getMenuItems();
+      const map = MenuStorage.getUnavailableMap();
+      setUnavailableMap(map);
       setMenuItems(items || []);
       setCtxMenuItems?.(items || []);
     } catch (err) {
@@ -282,9 +285,34 @@ export default function MenuPage() {
                       </div>
                     )}
                   </div>
-                  <span className="font-bold text-amber-700 text-base">
-                    ${Number(item.price || 0).toFixed(2)}
-                  </span>
+                  <div className="flex flex-col items-end gap-2">
+                    <span className="font-bold text-amber-700 text-base">
+                      ${Number(item.price || 0).toFixed(2)}
+                    </span>
+                    <label
+                      className="flex items-center gap-2 text-xs text-stone-600"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Checkbox
+                        checked={!!item.is_unavailable}
+                        onCheckedChange={(checked) => {
+                          const next = MenuStorage.setUnavailable(item.id, checked);
+                          setUnavailableMap(next);
+                          setMenuItems((prev) =>
+                            (prev || []).map((i) =>
+                              i.id === item.id ? { ...i, is_unavailable: !!checked } : i
+                            )
+                          );
+                          setCtxMenuItems?.((prev) =>
+                            (prev || []).map((i) =>
+                              i.id === item.id ? { ...i, is_unavailable: !!checked } : i
+                            )
+                          );
+                        }}
+                      />
+                      <span>{item.is_unavailable ? "Unavailable" : "Available"}</span>
+                    </label>
+                  </div>
                 </div>
               ))}
             </div>

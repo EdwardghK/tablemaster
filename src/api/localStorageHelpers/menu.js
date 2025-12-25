@@ -2,6 +2,7 @@ import { supabase } from "@/supabase";
 
 const MENU_CACHE_KEY = "tablemaster_menu_cache";
 const PREFX_CACHE_KEY = "tablemaster_prefixed_cache";
+const UNAVAILABLE_KEY = "tablemaster_unavailable_items";
 
 const readCache = (key) => {
   if (typeof localStorage === "undefined") return null;
@@ -24,6 +25,18 @@ const writeCache = (key, value) => {
 };
 
 export const MenuStorage = {
+  getUnavailableMap() {
+    const cached = readCache(UNAVAILABLE_KEY);
+    return cached && typeof cached === "object" ? cached : {};
+  },
+
+  setUnavailable(id, value) {
+    const map = MenuStorage.getUnavailableMap();
+    map[id] = !!value;
+    writeCache(UNAVAILABLE_KEY, map);
+    return map;
+  },
+
   async getMenuItems() {
     let data;
     try {
@@ -74,6 +87,7 @@ export const MenuStorage = {
     }
 
     // Normalize to include category slug/name and a single price field for the UI
+    const unavailableMap = MenuStorage.getUnavailableMap();
     const normalized = items.map((item) => {
       const category =
         item?.menu_categories ||
@@ -114,6 +128,7 @@ export const MenuStorage = {
         category_name: category?.name,
         allergens: Array.isArray(item.allergens) ? item.allergens : [],
         common_mods: Array.isArray(item.common_mods) ? item.common_mods : [],
+        is_unavailable: !!unavailableMap[item.id],
       };
     });
 

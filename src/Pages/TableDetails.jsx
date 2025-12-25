@@ -116,11 +116,28 @@ export default function TableDetails() {
     ...(activeGuest?.custom_allergens || [])
   ];
 
+  const taxRatePercent = table?.tax_rate === '' || table?.tax_rate === undefined ? 13 : Number(table.tax_rate) || 0;
+  const taxRate = taxRatePercent / 100;
+  const tableBudgetTotal = Number(table?.budget_total) || 0;
+  const tableBudgetPerGuest = Number(table?.budget_per_guest) || 0;
+  const guestCount = guests.length || Number(table?.guest_count) || 0;
+  const effectiveBudget = tableBudgetTotal || (tableBudgetPerGuest && guestCount ? tableBudgetPerGuest * guestCount : 0);
+  const tableOrderTotal = orderItems.reduce(
+    (sum, item) => sum + (Number(item.price) || 0) * (item.quantity || 1),
+    0
+  );
+  const taxAmount = tableOrderTotal * taxRate;
+  const totalWithTax = tableOrderTotal + taxAmount;
+  const compareTotal = table?.budget_include_tax ? totalWithTax : tableOrderTotal;
+  const budgetExceeded = effectiveBudget > 0 && compareTotal > effectiveBudget;
+  const budgetRemaining = effectiveBudget > 0 ? effectiveBudget - compareTotal : null;
+
   const guestOrderItems = orderItems.filter(i => i.guest_id === activeGuestId);
 
   const filteredMenuItems = menuItems.filter(item => {
     if (activeCategory === 'all') return true;
     if (activeCategory.startsWith('party_')) return false;
+    if (item.is_unavailable) return false;
     return item.category === activeCategory;
   }).sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' }));
 
@@ -240,11 +257,27 @@ export default function TableDetails() {
               <div>
                 <h3 className="text-lg font-semibold text-stone-900">Table {table?.table_number}</h3>
                 {table?.section ? <p className="text-xs text-stone-500">Section: {table.section}</p> : null}
+                {effectiveBudget > 0 && (
+                  <p className={cn(
+                    "text-xs",
+                    budgetExceeded ? "text-red-600" : "text-stone-500"
+                  )}>
+                    Budget {budgetExceeded ? "exceeded" : "limit"}: ${effectiveBudget.toFixed(2)} | Spent: ${compareTotal.toFixed(2)} {table?.budget_include_tax ? "(with tax)" : "(pre-tax)"}
+                    {budgetRemaining !== null && !budgetExceeded && ` | Remaining: $${budgetRemaining.toFixed(2)}`}
+                  </p>
+                )}
               </div>
             </div>
             <div className="flex items-center gap-1">
               <DarkModeToggle />
-              <Button variant="ghost" size="icon" className="text-stone-900" onClick={() => setEditTableModal(true)}>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="text-stone-900"
+                onClick={(e) => { e.stopPropagation(); setEditTableModal(true); }}
+                onTouchStart={(e) => { e.stopPropagation(); setEditTableModal(true); }}
+              >
                 <Settings className="h-4 w-4" />
               </Button>
             </div>
@@ -466,6 +499,7 @@ export default function TableDetails() {
                             <div className="mt-2 space-y-2">
                               {(course.items || []).map(item => {
                                 const fullItem = menuItems.find((mi) => mi.id === item.id);
+                                if (fullItem?.is_unavailable) return null;
                                 const existingForCourse = guestOrderItems.find(i => i.course === course.course);
                                 const isSelected = existingForCourse?.menu_item_id === item.id;
                                 const selectedQuantity = isSelected ? (existingForCourse?.quantity || 0) : 0;
@@ -572,6 +606,11 @@ export default function TableDetails() {
             <div className="text-sm text-stone-500">{guestOrderItems.length} items</div>
           </div>
           <>
+              {budgetExceeded && (
+                <div className="mb-3 text-sm text-red-700 bg-red-50 border border-red-200 rounded-xl px-3 py-2">
+                  Budget exceeded: ${compareTotal.toFixed(2)} {table?.budget_include_tax ? "(with tax)" : "(pre-tax)"} vs ${effectiveBudget.toFixed(2)} limit
+                </div>
+              )}
               {guestAllergens.length > 0 && (
                 <div className="mb-3 text-sm text-red-700 bg-red-50 border border-red-200 rounded-xl px-3 py-2">
                   Allergy alert: {guestAllergens.join(", ")}

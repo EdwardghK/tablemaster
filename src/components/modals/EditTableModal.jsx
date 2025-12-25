@@ -16,6 +16,10 @@ export default function EditTableModal({ open, onClose, table, sections, onSave,
     guest_count: 0,
     color: '#D97706',
     notes: '',
+    budget_total: '',
+    budget_per_guest: '',
+    tax_rate: '13',
+    budget_include_tax: false,
   });
 
   useEffect(() => {
@@ -25,12 +29,24 @@ export default function EditTableModal({ open, onClose, table, sections, onSave,
         guest_count: table.guest_count || 0,
         color: table.color || '#D97706',
         notes: table.notes || '',
+        budget_total: table.budget_total || '',
+        budget_per_guest: table.budget_per_guest || '',
+        tax_rate: (table.tax_rate ?? '13').toString(),
+        budget_include_tax: !!table.budget_include_tax,
       });
     }
   }, [table]);
 
   const handleSave = async () => {
-    const savedTable = await onSave({ ...table, ...formData });
+    const payload = {
+      ...table,
+      ...formData,
+      budget_total: formData.budget_total === '' ? '' : Number(formData.budget_total),
+      budget_per_guest: formData.budget_per_guest === '' ? '' : Number(formData.budget_per_guest),
+      tax_rate: formData.tax_rate === '' ? '' : Number(formData.tax_rate),
+      budget_include_tax: !!formData.budget_include_tax,
+    };
+    const savedTable = await onSave(payload);
     if (!table?.id && formData.guest_count > 0 && onCreateGuests) {
       onCreateGuests(savedTable, formData.guest_count);
     }
@@ -100,6 +116,62 @@ export default function EditTableModal({ open, onClose, table, sections, onSave,
               className="rounded-xl resize-none bg-stone-50 dark:bg-stone-700 text-stone-900 dark:text-stone-100"
               rows={2}
             />
+          </div>
+
+          {/* Budget */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label className="text-stone-700 dark:text-stone-200">Budget (total)</Label>
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                value={formData.budget_total}
+                onChange={(e) => setFormData({ ...formData, budget_total: e.target.value })}
+                placeholder="e.g., 200"
+                className="rounded-xl bg-stone-50 dark:bg-stone-700 text-stone-900 dark:text-stone-100"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-stone-700 dark:text-stone-200">Budget per guest</Label>
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                value={formData.budget_per_guest}
+                onChange={(e) => setFormData({ ...formData, budget_per_guest: e.target.value })}
+                placeholder="e.g., 50"
+                className="rounded-xl bg-stone-50 dark:bg-stone-700 text-stone-900 dark:text-stone-100"
+              />
+            </div>
+          </div>
+
+          {/* Tax settings */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label className="text-stone-700 dark:text-stone-200">Tax rate (%)</Label>
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                value={formData.tax_rate}
+                onChange={(e) => setFormData({ ...formData, tax_rate: e.target.value })}
+                placeholder="e.g., 13"
+                className="rounded-xl bg-stone-50 dark:bg-stone-700 text-stone-900 dark:text-stone-100"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-stone-700 dark:text-stone-200">Budget includes tax?</Label>
+              <div className="flex items-center gap-2 h-10">
+                <input
+                  type="checkbox"
+                  checked={formData.budget_include_tax}
+                  onChange={(e) => setFormData({ ...formData, budget_include_tax: e.target.checked })}
+                  className="h-4 w-4"
+                />
+                <span className="text-sm text-stone-700 dark:text-stone-200">Yes</span>
+              </div>
+            </div>
           </div>
         </div>
 

@@ -1,10 +1,10 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { Users, Clock, AlertCircle, Trash2 } from 'lucide-react';
+import { Users, Clock, AlertCircle, Trash2, Pencil } from 'lucide-react';
 import { cn } from '@/utils';
 
-export default function TableCard({ table, orderCount = 0, hasAllergens = false, onDelete }) {
+export default function TableCard({ table, orderCount = 0, hasAllergens = false, onDelete, onEdit }) {
   return (
     <div className="relative group">
       <Link
@@ -57,11 +57,22 @@ export default function TableCard({ table, orderCount = 0, hasAllergens = false,
         </div>
       </Link>
 
+      {onEdit && (
+        <button
+          type="button"
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); onEdit(table); }}
+          className="absolute top-2 right-2 p-2 rounded-full bg-white/90 border border-stone-200 shadow-sm text-stone-500 hover:text-amber-700 hover:border-amber-200 opacity-0 group-hover:opacity-100 transition-opacity"
+          aria-label={`Edit table ${table.table_number}`}
+        >
+          <Pencil className="h-4 w-4" />
+        </button>
+      )}
+
       {onDelete && (
         <button
           type="button"
           onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDelete(table); }}
-          className="absolute top-1/2 -translate-y-1/2 right-2 p-2 rounded-full bg-white/90 border border-stone-200 shadow-sm text-stone-500 hover:text-red-600 hover:border-red-200 opacity-0 group-hover:opacity-100 transition-opacity"
+          className="absolute bottom-2 right-2 p-2 rounded-full bg-white/90 border border-stone-200 shadow-sm text-stone-500 hover:text-red-600 hover:border-red-200 opacity-0 group-hover:opacity-100 transition-opacity"
           aria-label={`Delete table ${table.table_number}`}
         >
           <Trash2 className="h-4 w-4" />

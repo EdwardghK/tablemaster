@@ -140,6 +140,7 @@ export default function Tables() {
                   orderCount={getTableOrderCount(table.id)}
                   hasAllergens={tableHasAllergens(table.id)}
                   onDelete={handleDeleteTable}
+                  onEdit={() => setEditModal({ open: true, table })}
                 />
               ))}
             </div>
