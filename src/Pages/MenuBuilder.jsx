@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from "react";
 import Header from "@/components/common/Header";
 import BottomNav from "@/components/common/BottomNav";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Label } from "@/components/ui/Label";
+import { Checkbox } from "@/components/ui/Checkbox";
 import { Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { MenuStorage } from "@/api/localStorageHelpers/menu";
