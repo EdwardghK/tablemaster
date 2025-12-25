@@ -1,7 +1,7 @@
 import React from 'react';
 import { cn } from '@/utils';
 import { Trash2, AlertTriangle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/Button';
 
 export default function OrderSummary({ 
   orderItems, 

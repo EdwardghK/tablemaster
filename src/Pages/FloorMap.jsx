@@ -6,9 +6,9 @@ import Header from '@/components/common/Header';
 import BottomNav from '@/components/common/BottomNav';
 import EditTableModal from '@/components/modals/EditTableModal';
 import SectionManager from '@/components/common/settings/SectionManager';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/Button';
 import { Plus, Edit2, Save, Move, Users, Settings } from 'lucide-react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/Select';
 import { TableStorage } from '@/api/localStorageHelpers/tables';
 
 const statusColors = {

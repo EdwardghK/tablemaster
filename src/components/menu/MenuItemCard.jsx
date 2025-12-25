@@ -4,9 +4,9 @@ import React, { useState } from 'react';
 import { cn } from '@/utils';
 import { Check, AlertTriangle, Plus, Minus, Pencil } from 'lucide-react';
 import AllergenBadge from '@/components/common/AllergenBadge';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
+import { Button } from '@/components/ui/Button';
+import { Textarea } from '@/components/ui/Textarea';
+import { Checkbox } from '@/components/ui/Checkbox';
 
 export default function MenuItemCard({ 
   item, 

@@ -1,4 +1,4 @@
-// src/components/ui/button.js
+// src/components/ui/button.jsx
 import React from 'react';
 import { cn } from '@/utils';
 
