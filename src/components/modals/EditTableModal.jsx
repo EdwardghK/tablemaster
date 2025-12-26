@@ -59,14 +59,14 @@ export default function EditTableModal({ open, onClose, table, sections, onSave,
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-md rounded-2xl bg-white dark:bg-stone-800">
+      <DialogContent className="max-w-md rounded-2xl bg-white dark:bg-stone-800 max-h-[85vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold text-stone-900 dark:text-stone-100">
             {table?.id ? 'Edit Table' : 'Add Table'}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-5 py-4">
+        <div className="space-y-5 py-4 flex-1 overflow-y-auto">
           {/* Table Number */}
           <div className="space-y-2">
             <Label className="text-stone-700 dark:text-stone-200">Table Number/Name</Label>
@@ -82,10 +82,20 @@ export default function EditTableModal({ open, onClose, table, sections, onSave,
           <div className="space-y-2">
             <Label className="text-stone-700 dark:text-stone-200">Number of Guests</Label>
             <Input
-              type="number"
+              type="tel"
+              inputMode="numeric"
               min="0"
-              value={formData.guest_count}
-              onChange={(e) => setFormData({ ...formData, guest_count: parseInt(e.target.value) || 0 })}
+              value={formData.guest_count === 0 ? '' : formData.guest_count}
+              onFocus={() => {
+                if (formData.guest_count === 0) {
+                  setFormData({ ...formData, guest_count: '' });
+                }
+              }}
+              onChange={(e) => {
+                const cleaned = e.target.value.replace(/\\D/g, '');
+                const numeric = cleaned === '' ? '' : parseInt(cleaned, 10);
+                setFormData({ ...formData, guest_count: numeric });
+              }}
               className="rounded-xl bg-stone-50 dark:bg-stone-700 text-stone-900 dark:text-stone-100"
             />
           </div>
