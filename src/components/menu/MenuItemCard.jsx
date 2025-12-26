@@ -35,12 +35,17 @@ export default function MenuItemCard({
   const hasAllergenWarning = matchingAllergens.length > 0;
   // Support both legacy "common_modifications" and new "common_mods" from menu items
   const modsList = item.common_modifications || item.common_mods || [];
-  const hasOptions = (modsList.length > 0) || item.category === 'steaks' || item.category === 'main';
+  const isSteak = item.category === 'steaks';
+  // Only force the customization flow for steaks; everything else is one-tap add/remove with edit via the pencil.
+  const hasOptions = isSteak;
 
   const handleCardClick = () => {
     if (isSelected) {
       onRemoveFromOrder(item.id);
-    } else if (!hasOptions) {
+      return;
+    }
+
+    if (!hasOptions) {
       onAddToOrder({
         menu_item_id: item.id,
         menu_item_name: item.name,
@@ -50,9 +55,11 @@ export default function MenuItemCard({
         price: item.price,
         allergen_warning: hasAllergenWarning,
       });
-    } else {
-      onToggleExpand(isExpanded ? null : item.id);
+      return;
     }
+
+    // Steaks require doneness/options; open the expanded panel.
+    onToggleExpand(isExpanded ? null : item.id);
   };
 
   const handleAdd = (e) => {
@@ -203,15 +210,15 @@ export default function MenuItemCard({
                     className={cn(
                       "flex items-center gap-2 p-2.5 rounded-xl border cursor-pointer transition-all",
                       selectedMods.includes(mod) 
-                        ? "border-amber-400 bg-amber-50 dark:bg-amber-900" 
-                        : "border-stone-200 dark:border-stone-700 hover:border-stone-300 dark:hover:border-stone-500"
+                        ? "border-amber-400 bg-amber-50 dark:bg-amber-900 text-stone-900 dark:text-stone-900" 
+                        : "border-stone-200 dark:border-stone-700 hover:border-stone-300 dark:hover:border-stone-500 text-stone-800 dark:text-stone-900"
                     )}
                   >
                     <Checkbox 
                       checked={selectedMods.includes(mod)}
                       onCheckedChange={() => toggleMod(mod)}
                     />
-                    <span className="text-sm text-stone-700 dark:text-stone-200">{mod}</span>
+                    <span className="text-sm text-stone-700 dark:text-stone-900">{mod}</span>
                   </label>
                 ))}
               </div>

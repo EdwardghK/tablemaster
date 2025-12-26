@@ -35,10 +35,8 @@ export default function EditTableModal({ open, onClose, table, sections, onSave,
         tax_rate: (table.tax_rate ?? '13').toString(),
         budget_include_tax: !!table.budget_include_tax,
       });
-      setShowOptions(true);
-    } else {
-      setShowOptions(false);
     }
+    setShowOptions(false);
   }, [table]);
 
   const handleSave = async () => {
