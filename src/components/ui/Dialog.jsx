@@ -1,4 +1,3 @@
-// src/components/ui/dialog.js
 import React from 'react';
 import { cn } from '@/utils';
 

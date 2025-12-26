@@ -21,6 +21,7 @@ export default function EditTableModal({ open, onClose, table, sections, onSave,
     tax_rate: '13',
     budget_include_tax: false,
   });
+  const [showOptions, setShowOptions] = useState(false);
 
   useEffect(() => {
     if (table) {
@@ -34,6 +35,9 @@ export default function EditTableModal({ open, onClose, table, sections, onSave,
         tax_rate: (table.tax_rate ?? '13').toString(),
         budget_include_tax: !!table.budget_include_tax,
       });
+      setShowOptions(true);
+    } else {
+      setShowOptions(false);
     }
   }, [table]);
 
@@ -86,26 +90,6 @@ export default function EditTableModal({ open, onClose, table, sections, onSave,
             />
           </div>
 
-          {/* Color */}
-          <div className="space-y-2">
-            <Label className="text-stone-700 dark:text-stone-200">Table Color</Label>
-            <div className="flex gap-2 flex-wrap">
-              {TABLE_COLORS.map(color => (
-                <button
-                  key={color}
-                  onClick={() => setFormData({ ...formData, color })}
-                  className={cn(
-                    "w-10 h-10 rounded-xl transition-all",
-                    formData.color === color 
-                      ? "ring-2 ring-offset-2 ring-stone-900 dark:ring-stone-200 scale-110" 
-                      : "hover:scale-105"
-                  )}
-                  style={{ backgroundColor: color }}
-                />
-              ))}
-            </div>
-          </div>
-
           {/* Notes */}
           <div className="space-y-2">
             <Label className="text-stone-700 dark:text-stone-200">Notes</Label>
@@ -118,60 +102,100 @@ export default function EditTableModal({ open, onClose, table, sections, onSave,
             />
           </div>
 
-          {/* Budget */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label className="text-stone-700 dark:text-stone-200">Budget (total)</Label>
-              <Input
-                type="number"
-                min="0"
-                step="0.01"
-                value={formData.budget_total}
-                onChange={(e) => setFormData({ ...formData, budget_total: e.target.value })}
-                placeholder="e.g., 200"
-                className="rounded-xl bg-stone-50 dark:bg-stone-700 text-stone-900 dark:text-stone-100"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-stone-700 dark:text-stone-200">Budget per guest</Label>
-              <Input
-                type="number"
-                min="0"
-                step="0.01"
-                value={formData.budget_per_guest}
-                onChange={(e) => setFormData({ ...formData, budget_per_guest: e.target.value })}
-                placeholder="e.g., 50"
-                className="rounded-xl bg-stone-50 dark:bg-stone-700 text-stone-900 dark:text-stone-100"
-              />
-            </div>
-          </div>
+          {/* Optional settings */}
+          <div className="rounded-2xl border border-stone-200 dark:border-stone-700 bg-stone-50/50 dark:bg-stone-800/50">
+            <button
+              type="button"
+              className="flex w-full items-center justify-between px-4 py-3 text-left text-stone-800 dark:text-stone-100"
+              onClick={() => setShowOptions(!showOptions)}
+              aria-expanded={showOptions}
+            >
+              <span className="font-medium">Optional settings</span>
+              <span className="text-sm text-stone-500 dark:text-stone-300">
+                {showOptions ? 'Hide' : 'Show'}
+              </span>
+            </button>
 
-          {/* Tax settings */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label className="text-stone-700 dark:text-stone-200">Tax rate (%)</Label>
-              <Input
-                type="number"
-                min="0"
-                step="0.01"
-                value={formData.tax_rate}
-                onChange={(e) => setFormData({ ...formData, tax_rate: e.target.value })}
-                placeholder="e.g., 13"
-                className="rounded-xl bg-stone-50 dark:bg-stone-700 text-stone-900 dark:text-stone-100"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-stone-700 dark:text-stone-200">Budget includes tax?</Label>
-              <div className="flex items-center gap-2 h-10">
-                <input
-                  type="checkbox"
-                  checked={formData.budget_include_tax}
-                  onChange={(e) => setFormData({ ...formData, budget_include_tax: e.target.checked })}
-                  className="h-4 w-4"
-                />
-                <span className="text-sm text-stone-700 dark:text-stone-200">Yes</span>
+            {showOptions && (
+              <div className="space-y-4 border-t border-stone-200 dark:border-stone-700 px-4 py-4">
+                {/* Color */}
+                <div className="space-y-2">
+                  <Label className="text-stone-700 dark:text-stone-200">Table Color</Label>
+                  <div className="flex gap-2 flex-wrap">
+                    {TABLE_COLORS.map(color => (
+                      <button
+                        key={color}
+                        onClick={() => setFormData({ ...formData, color })}
+                        className={cn(
+                          "w-10 h-10 rounded-xl transition-all",
+                          formData.color === color 
+                            ? "ring-2 ring-offset-2 ring-stone-900 dark:ring-stone-200 scale-110" 
+                            : "hover:scale-105"
+                        )}
+                        style={{ backgroundColor: color }}
+                        aria-label={`Choose ${color}`}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Budget */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label className="text-stone-700 dark:text-stone-200">Budget (total)</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={formData.budget_total}
+                      onChange={(e) => setFormData({ ...formData, budget_total: e.target.value })}
+                      placeholder="e.g., 200"
+                      className="rounded-xl bg-stone-50 dark:bg-stone-700 text-stone-900 dark:text-stone-100"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-stone-700 dark:text-stone-200">Budget per guest</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={formData.budget_per_guest}
+                      onChange={(e) => setFormData({ ...formData, budget_per_guest: e.target.value })}
+                      placeholder="e.g., 50"
+                      className="rounded-xl bg-stone-50 dark:bg-stone-700 text-stone-900 dark:text-stone-100"
+                    />
+                  </div>
+                </div>
+
+                {/* Tax settings */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label className="text-stone-700 dark:text-stone-200">Tax rate (%)</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={formData.tax_rate}
+                      onChange={(e) => setFormData({ ...formData, tax_rate: e.target.value })}
+                      placeholder="e.g., 13"
+                      className="rounded-xl bg-stone-50 dark:bg-stone-700 text-stone-900 dark:text-stone-100"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-stone-700 dark:text-stone-200">Budget includes tax?</Label>
+                    <div className="flex items-center gap-2 h-10">
+                      <input
+                        type="checkbox"
+                        checked={formData.budget_include_tax}
+                        onChange={(e) => setFormData({ ...formData, budget_include_tax: e.target.checked })}
+                        className="h-4 w-4"
+                      />
+                      <span className="text-sm text-stone-700 dark:text-stone-200">Yes</span>
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
 

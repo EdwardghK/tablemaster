@@ -1,0 +1,4 @@
+name = "tablemaster"
+main = "_worker.js"
+assets = { directory = "dist" }
+compatibility_date = "2025-12-25"

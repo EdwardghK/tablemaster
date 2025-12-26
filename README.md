@@ -1,4 +1,4 @@
-# TableMaster
+ï»¿# TableMaster
 
 TableMaster is a restaurant table, guest, and menu workflow app built with React + Vite. It keeps FOH/BOH in sync with Supabase-backed menus and local persistence for tables, guests, orders, and dark-mode preferences.
 
@@ -24,6 +24,11 @@ VITE_SUPABASE_ANON_KEY=<your_supabase_anon_key>
 4) Dev server: `npm run dev` (Vite dev server with hot reload).
 5) Lint/build: `npm run lint`, `npm run build`, `npm run preview`.
 
+## Deploying to Cloudflare
+- Build output is `dist` (Vite default).
+- Pages (recommended): run `npm run build` then `npx wrangler pages deploy dist --project-name tablemaster`. In the Pages UI set root/path to `/` and output/build directory to `dist`. No deploy command needed.
+- Workers (if you need workers.dev or routes): `wrangler.toml` already points to `_worker.js` and `assets = { directory = "dist" }`. Run `npm run build` then `npx wrangler deploy` to serve `dist` with SPA fallback.
+
 ## Supabase data model (minimum)
 - `menu_categories`: `id`, `slug` (unique), `name`, `sort_order`.
 - `menu_items`: `id`, `category_id` FK ? `menu_categories.id`, `name`, `description`, `origin`, `notes`, `allergens` (array/text[]), `created_at`.
@@ -36,13 +41,14 @@ VITE_SUPABASE_ANON_KEY=<your_supabase_anon_key>
 The UI assumes category slugs match the constants in `src/Pages/Menu.jsx` (e.g., `appetizers`, `salads`, `steaks`, `sides`, etc.).
 
 ## Routes (useful during testing)
-- `/` – table list/dashboard.
-- `/TableDetails?id=<tableId>` – seat & order workflow for a table.
-- `/expo` and `/expo/table?id=<tableId>` – expo view.
-- `/menu` – manage menu items.
-- `/menu-builder` – create/update pre-fixed menus.
-- `/floormap` – drag/drop floor map layout.
+- `/` â€“ table list/dashboard.
+- `/TableDetails?id=<tableId>` â€“ seat & order workflow for a table.
+- `/expo` and `/expo/table?id=<tableId>` â€“ expo view.
+- `/menu` â€“ manage menu items.
+- `/menu-builder` â€“ create/update pre-fixed menus.
+- `/floormap` â€“ drag/drop floor map layout.
 
 ## Data persistence notes
 - Local keys: `tablemaster_tables`, `tablemaster_guests`, `tablemaster_orders`, `tablemaster_order_items`, `darkMode`.
 - Removing those keys in dev resets local data; Supabase data remains remote.
+
