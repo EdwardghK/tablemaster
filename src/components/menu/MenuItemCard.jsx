@@ -208,17 +208,17 @@ export default function MenuItemCard({
                     key={mod}
                     onClick={(e) => e.stopPropagation()}
                     className={cn(
-                      "flex items-center gap-2 p-2.5 rounded-xl border cursor-pointer transition-all",
+                      "flex items-center gap-2 p-2.5 rounded-xl border cursor-pointer transition-all bg-white dark:bg-white",
                       selectedMods.includes(mod) 
-                        ? "border-amber-400 bg-amber-50 dark:bg-amber-900 text-stone-900 dark:text-stone-900" 
-                        : "border-stone-200 dark:border-stone-700 hover:border-stone-300 dark:hover:border-stone-500 text-stone-800 dark:text-stone-900"
+                        ? "border-amber-400 bg-amber-50 dark:bg-amber-50 text-stone-900" 
+                        : "border-stone-200 dark:border-stone-700 hover:border-stone-300 dark:hover:border-stone-500 text-stone-900"
                     )}
                   >
                     <Checkbox 
                       checked={selectedMods.includes(mod)}
                       onCheckedChange={() => toggleMod(mod)}
                     />
-                    <span className="text-sm text-stone-700 dark:text-stone-900">{mod}</span>
+                    <span className="text-sm text-stone-900">{mod}</span>
                   </label>
                 ))}
               </div>
