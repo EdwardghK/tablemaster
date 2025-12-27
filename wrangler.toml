@@ -1,4 +1,3 @@
 name = "tablemaster"
-main = "_worker.js"
-assets = { directory = "dist" }
+pages_build_output_dir = "dist"
 compatibility_date = "2025-12-25"
