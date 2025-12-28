@@ -1,10 +1,12 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useContext } from "react";
 import { supabase } from "@/supabase";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import Header from "@/components/common/Header";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import EditAccessRequest from "@/components/common/EditAccessRequest";
+import { AppContext } from "@/context/AppContext";
 
 export default function Profile() {
   const [loading, setLoading] = useState(true);
@@ -12,6 +14,8 @@ export default function Profile() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [editing, setEditing] = useState(false);
+  const [showRequest, setShowRequest] = useState(false);
+  const { requiresApproval, editRequest, submitEditRequest, accessLoading } = useContext(AppContext);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -68,6 +72,16 @@ export default function Profile() {
     navigate("/login", { replace: true });
   };
 
+  const handleRequestAccess = async (reason) => {
+    try {
+      await submitEditRequest(reason);
+      toast.success("Request sent to admins");
+    } catch (err) {
+      console.error("Request access failed:", err);
+      toast.error(err?.message || "Could not submit request");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-stone-50 dark:bg-stone-900 pb-24">
       <Header title="Profile" />
@@ -87,6 +101,34 @@ export default function Profile() {
           >
             Logout
           </Button>
+          {requiresApproval && (
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={() => setShowRequest((prev) => !prev)}
+                className="w-full text-left px-4 py-3 rounded-xl border border-stone-200 bg-white hover:bg-stone-50 dark:bg-stone-800 dark:border-stone-700"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-stone-800 dark:text-stone-100">
+                    Request for editing
+                  </span>
+                  <span className="text-xs text-stone-500">{showRequest ? "Hide" : "Show"}</span>
+                </div>
+              </button>
+              {showRequest && (
+                <div className="mt-3">
+                  <EditAccessRequest
+                    request={editRequest}
+                    onSubmit={handleRequestAccess}
+                    disabled={accessLoading}
+                    message="Submit a request to gain edit permissions. Admins will review and approve."
+                    title="View-only mode"
+                    ctaLabel="Submit request"
+                  />
+                </div>
+              )}
+            </div>
+          )}
         </div>
       ) : (
         <div className="p-4 space-y-4 max-w-xl mx-auto">

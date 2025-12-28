@@ -6,7 +6,6 @@ import { AppContext } from "@/context/AppContext.jsx";
 import { Button } from "@/components/ui/Button";
 import { Plus, Trash2, Pencil } from "lucide-react";
 import AllergenBadge, { COMMON_ALLERGENS } from "@/components/common/AllergenBadge";
-import EditAccessRequest from "@/components/common/EditAccessRequest";
 import { ChangeRequests } from "@/api/changeRequests";
 import {
   Dialog,
@@ -48,9 +47,6 @@ export default function MenuPage() {
     menuItems: ctxMenuItems,
     setMenuItems: setCtxMenuItems,
     requiresApproval,
-    editRequest,
-    submitEditRequest,
-    accessLoading,
     user,
   } = useContext(AppContext);
 
@@ -256,16 +252,6 @@ export default function MenuPage() {
     setPrefixedMenu(null);
   };
 
-  const handleRequestAccess = async (reason) => {
-    try {
-      await submitEditRequest(reason);
-      toast.success("Request sent to admins");
-    } catch (err) {
-      console.error("Request access failed:", err);
-      toast.error(err?.message || "Could not submit request");
-    }
-  };
-
   // ----------------- Render -----------------
   return (
     <div className="min-h-screen bg-stone-50 pb-24 dark:bg-stone-900">
@@ -285,16 +271,6 @@ export default function MenuPage() {
           </div>
         }
       />
-
-      {requiresApproval && !accessLoading && (
-        <div className="px-4 pt-3">
-          <EditAccessRequest
-            request={editRequest}
-            onSubmit={handleRequestAccess}
-            message="Only admins can create or remove menu items. Submit a request to temporarily gain edit rights."
-          />
-        </div>
-      )}
 
       {/* Category Filter */}
       <div className="sticky top-14 z-30 px-4 py-3 bg-stone-50 dark:bg-stone-900 border-b border-stone-100 dark:border-stone-800">

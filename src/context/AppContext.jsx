@@ -78,14 +78,14 @@ export const AppProvider = ({ children }) => {
       if (editRequest?.status === "pending") {
         return editRequest;
       }
-      const { data } = await supabase.auth.getUser();
+      const { data } = user ? { data: { user } } : await supabase.auth.getUser();
       const currentUser = data?.user;
       if (!currentUser) throw new Error("You must be signed in to request edit access");
       const created = await AccessRequests.submit(currentUser, reason);
       setEditRequest(created);
       return created;
     },
-    [editRequest]
+    [editRequest, user]
   );
 
   // Initialize from the storage helpers so sources are consistent

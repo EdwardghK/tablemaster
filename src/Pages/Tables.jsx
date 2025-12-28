@@ -11,14 +11,13 @@ import { TableStorage } from '@/api/localStorageHelpers/tables';
 import { GuestStorage } from '@/api/localStorageHelpers/guests';
 import { OrderStorage } from '@/api/localStorageHelpers/orders';
 import { AppContext } from '@/context/AppContext';
-import EditAccessRequest from '@/components/common/EditAccessRequest';
 import { toast } from 'sonner';
 import { ChangeRequests } from '@/api/changeRequests';
 
 export default function Tables() {
   const [searchQuery, setSearchQuery] = useState('');
   const [editModal, setEditModal] = useState({ open: false, table: null });
-  const { requiresApproval, editRequest, submitEditRequest, accessLoading, user } = useContext(AppContext);
+  const { requiresApproval, user } = useContext(AppContext);
 
   const [tables, setTables] = useState([]);
   const [guests, setGuests] = useState([]);
@@ -131,16 +130,6 @@ export default function Tables() {
     }
   };
 
-  const handleRequestAccess = async (reason) => {
-    try {
-      await submitEditRequest(reason);
-      toast.success('Request sent to admins');
-    } catch (err) {
-      console.error('Request access failed:', err);
-      toast.error(err?.message || 'Could not submit request');
-    }
-  };
-
   return (
     <div className="min-h-screen bg-stone-50 pb-24">
       <Header title="TableMaster" />
@@ -172,16 +161,6 @@ export default function Tables() {
         </div>
 
       </div>
-
-      {requiresApproval && !accessLoading && (
-        <div className="px-4 py-3">
-          <EditAccessRequest
-            request={editRequest}
-            onSubmit={handleRequestAccess}
-            message="You can browse tables, but only admins can add, edit, or delete. Submit a request and an admin can grant temporary edit access."
-          />
-        </div>
-      )}
 
       {/* Tables Grid */}
       <div className="p-4 space-y-6">

@@ -9,7 +9,6 @@ import { Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { MenuStorage } from "@/api/localStorageHelpers/menu";
 import { AppContext } from "@/context/AppContext";
-import EditAccessRequest from "@/components/common/EditAccessRequest";
 import { ChangeRequests } from "@/api/changeRequests";
 
 const DEFAULT_COURSES = ["Course 1", "Course 2", "Course 3"];
@@ -17,7 +16,7 @@ const buildEmptySelections = (courseList) =>
   courseList.reduce((acc, c) => ({ ...acc, [c]: [] }), {});
 
 export default function MenuBuilder() {
-  const { requiresApproval, editRequest, submitEditRequest, accessLoading, user } = useContext(AppContext);
+  const { requiresApproval, user } = useContext(AppContext);
   const [menuItems, setMenuItems] = useState([]);
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
@@ -220,16 +219,6 @@ export default function MenuBuilder() {
     }
   };
 
-  const handleRequestAccess = async (reason) => {
-    try {
-      await submitEditRequest(reason);
-      toast.success("Request sent to admins");
-    } catch (err) {
-      console.error("Request access failed:", err);
-      toast.error(err?.message || "Could not submit request");
-    }
-  };
-
   const selectedMenu = menus.find((m) => m.id === selectedMenuId) || null;
 
   return (
@@ -238,16 +227,6 @@ export default function MenuBuilder() {
         title="Menu Builder"
         subtitle="Create, edit, and manage pre-fixed menus"
       />
-
-      {requiresApproval && !accessLoading && (
-        <div className="p-4 pt-3">
-          <EditAccessRequest
-            request={editRequest}
-            onSubmit={handleRequestAccess}
-            message="Only admins can change pre-fixed menus. Submit a request if you need to update or delete menus."
-          />
-        </div>
-      )}
 
       <div className="p-4 space-y-4">
         {/* Menus List */}

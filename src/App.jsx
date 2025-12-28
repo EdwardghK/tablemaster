@@ -14,6 +14,7 @@ import FloorMap from "@/Pages/FloorMap.jsx";
 import Home from "@/Pages/Home.jsx";
 import Login from "@/Pages/Login.jsx";
 import Profile from "@/Pages/Profile.jsx";
+import AdminInbox from "@/Pages/AdminInbox.jsx";
 
 export default function App() {
   const { pathname } = useLocation();
@@ -40,6 +41,7 @@ export default function App() {
           <Route path="/floormap" element={<FloorMap />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/home" element={<Home />} />
+          <Route path="/admin/inbox" element={<AdminInbox />} />
         </Routes>
       </Layout>
     </RequireAuth>

@@ -1,12 +1,13 @@
 // File: src/components/common/Header.jsx
 
-import React, { useContext } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { ChevronLeft, Mail } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { cn } from '@/utils';
 import DarkModeToggle from './DarkModeToggle';
 import { AppContext } from '@/context/AppContext';
+import { supabase } from '@/supabase';
 
 export default function Header({ 
   title, 
@@ -21,6 +22,36 @@ export default function Header({
     user?.user_metadata?.full_name ||
     user?.email ||
     null;
+  const [inboxCount, setInboxCount] = useState(0);
+
+  useEffect(() => {
+    if (!isAdmin) {
+      setInboxCount(0);
+      return;
+    }
+    let active = true;
+    (async () => {
+      try {
+        const { count: editCount } = await supabase
+          .from("edit_requests")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "pending");
+        const { count: changeCount } = await supabase
+          .from("change_requests")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "pending");
+        if (!active) return;
+        setInboxCount((editCount || 0) + (changeCount || 0));
+      } catch (err) {
+        if (!active) return;
+        console.warn("Inbox count fetch failed:", err);
+        setInboxCount(0);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [isAdmin]);
 
   return (
     <header className={cn(
@@ -48,10 +79,13 @@ export default function Header({
           {isAdmin ? (
             <Link
               to={createPageUrl('admin/inbox')}
-              className="p-2 rounded-full hover:bg-stone-100 dark:hover:bg-[#16213c] transition-colors"
+              className="relative p-2 rounded-full hover:bg-stone-100 dark:hover:bg-[#16213c] transition-colors"
               aria-label="Admin inbox"
             >
               <Mail className="h-5 w-5 text-stone-700 dark:text-[#e7eefc]" />
+              {inboxCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-red-600 border border-white dark:border-stone-800" />
+              )}
             </Link>
           ) : null}
           {displayName ? (

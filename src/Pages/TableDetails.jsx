@@ -20,7 +20,6 @@ import { GuestStorage } from '@/api/localStorageHelpers/guests';
 import { MenuStorage } from '@/api/localStorageHelpers/menu';
 import { OrderStorage } from '@/api/localStorageHelpers/orders';
 import { AppContext } from '@/context/AppContext';
-import EditAccessRequest from '@/components/common/EditAccessRequest';
 import { ChangeRequests } from '@/api/changeRequests';
 
 export default function TableDetails() {
@@ -30,9 +29,6 @@ export default function TableDetails() {
   const {
     menuItems: ctxMenuItems,
     requiresApproval,
-    editRequest,
-    submitEditRequest,
-    accessLoading,
     user,
   } = useContext(AppContext);
 
@@ -235,16 +231,6 @@ export default function TableDetails() {
     setOrderItems(prev => prev.map(i => i.id === orderItemId ? { ...i, course } : i));
   };
 
-  const handleRequestAccess = async (reason) => {
-    try {
-      await submitEditRequest(reason);
-      toast.success('Request sent to admins');
-    } catch (err) {
-      console.error('Request access failed:', err);
-      toast.error(err?.message || 'Could not submit request');
-    }
-  };
-
   const openEditOrder = (item) => {
     setEditOrderModal({
       open: true,
@@ -279,15 +265,6 @@ export default function TableDetails() {
     <div className="min-h-screen bg-stone-50 pb-24">
       {/* Main content: stacked full-width sections */}
       <div className="px-0 pb-4 space-y-6">
-        {requiresApproval && !accessLoading && (
-          <div className="px-4 pt-3">
-            <EditAccessRequest
-              request={editRequest}
-              onSubmit={handleRequestAccess}
-              message="You can view orders, but table settings are locked to admins. Request edit access if you need to change budgets, notes, or table details."
-            />
-          </div>
-        )}
         {/* Guests */}
         <div className="w-full sticky top-0 z-50 bg-stone-50 dark:bg-stone-900 border-b border-stone-200 dark:border-stone-800">
           {/* Table header (sticky) */}
