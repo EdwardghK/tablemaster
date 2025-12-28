@@ -68,28 +68,14 @@ export default function Tables() {
         guest_count: Number.isFinite(Number(tableData.guest_count)) ? Number(tableData.guest_count) : 0,
         status: tableData.status || 'available',
       };
-      if (requiresApproval) {
-        const before = payload.id ? tables.find(t => t.id === payload.id) : null;
-        await ChangeRequests.submit({
-          user,
-          entityType: 'table',
-          entityId: payload.id || payload.table_number || 'new',
-          action: payload.id ? 'update' : 'create',
-          beforeData: before,
-          afterData: payload,
-        });
-        toast.success('Submitted for approval. Changes will apply after admin review.');
-        return payload;
+      let savedTable;
+      if (payload.id) {
+        savedTable = await TableStorage.updateTable(payload.id, payload);
       } else {
-        let savedTable;
-        if (payload.id) {
-          savedTable = await TableStorage.updateTable(payload.id, payload);
-        } else {
-          savedTable = await TableStorage.createTable(payload);
-        }
-        setTables(await TableStorage.getAllTables());
-        return savedTable;
+        savedTable = await TableStorage.createTable(payload);
       }
+      setTables(await TableStorage.getAllTables());
+      return savedTable;
     } catch (err) {
       console.error('Failed to save table:', err);
       window.alert(err?.message || 'Could not save table');
