@@ -1,11 +1,12 @@
 // File: src/components/common/Header.jsx
 
-import React from 'react';
+import React, { useContext } from 'react';
 import { ChevronLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { cn } from '@/utils';
 import DarkModeToggle from './DarkModeToggle';
+import { AppContext } from '@/context/AppContext';
 
 export default function Header({ 
   title, 
@@ -14,6 +15,13 @@ export default function Header({
   rightAction,
   className 
 }) {
+  const { user, profile } = useContext(AppContext);
+  const displayName =
+    profile?.full_name ||
+    user?.user_metadata?.full_name ||
+    user?.email ||
+    null;
+
   return (
     <header className={cn(
       "sticky top-0 z-40 bg-white/80 dark:bg-[#0c1528cc] backdrop-blur-xl border-b border-stone-100 dark:border-[#16213c]",
@@ -36,7 +44,12 @@ export default function Header({
             )}
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
+          {displayName ? (
+            <span className="text-sm font-medium text-stone-700 dark:text-[#e7eefc] truncate max-w-[140px]">
+              {displayName}
+            </span>
+          ) : null}
           <DarkModeToggle />
           {rightAction}
         </div>
