@@ -8,7 +8,7 @@ const DEFAULT_CATEGORIES = [
   { value: 'caviar', label: 'Caviar' },
   { value: 'chilled_seafood', label: 'Chilled Seafood' },
   { value: 'steaks', label: 'Steaks' },
-  { value: 'main_ courses', label: 'Main Courses' },
+  { value: 'main_courses', label: 'Main Courses' },
   { value: 'sides', label: 'Sides' },
   { value: 'additions', label: 'Additions' },
   { value: 'sauces', label: 'Sauces' },

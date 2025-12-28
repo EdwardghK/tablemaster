@@ -6,6 +6,8 @@ import { AppContext } from "@/context/AppContext.jsx";
 import { Button } from "@/components/ui/Button";
 import { Plus, Trash2, Pencil } from "lucide-react";
 import AllergenBadge, { COMMON_ALLERGENS } from "@/components/common/AllergenBadge";
+import EditAccessRequest from "@/components/common/EditAccessRequest";
+import { ChangeRequests } from "@/api/changeRequests";
 import {
   Dialog,
   DialogContent,
@@ -42,8 +44,15 @@ const CATEGORIES = [
 
 // ----------------- Main Component -----------------
 export default function MenuPage() {
-  const { menuItems: ctxMenuItems, setMenuItems: setCtxMenuItems } =
-    useContext(AppContext);
+  const {
+    menuItems: ctxMenuItems,
+    setMenuItems: setCtxMenuItems,
+    requiresApproval,
+    editRequest,
+    submitEditRequest,
+    accessLoading,
+    user,
+  } = useContext(AppContext);
 
   const [menuItems, setMenuItems] = useState(ctxMenuItems || []);
   const [prefixedMenu, setPrefixedMenu] = useState(null);
@@ -104,7 +113,7 @@ export default function MenuPage() {
       payload.allergens = ["None"];
     }
 
-    try {
+    const saveDirect = async () => {
       if (itemModal.item?.id) {
         await MenuStorage.updateMenuItem(itemModal.item.id, payload);
         toast.success("Menu item updated");
@@ -112,12 +121,43 @@ export default function MenuPage() {
         await MenuStorage.createMenuItem(payload);
         toast.success("Menu item added");
       }
-
       await loadMenu();
+    };
+
+    try {
+      if (requiresApproval) {
+        const before = itemModal.item ? safeMenuItems.find(i => i.id === itemModal.item.id) : null;
+        try {
+          await ChangeRequests.submit({
+            user,
+            entityType: 'menu_item',
+            entityId: itemModal.item?.id || payload.name,
+            action: itemModal.item?.id ? 'update' : 'create',
+            beforeData: before,
+            afterData: payload,
+          });
+          toast.success("Submitted for approval. Changes will apply after admin review.");
+          closeModal();
+          return;
+        } catch (err) {
+          const msg = err?.message || err?.details || "";
+          const missingQueue = msg.toLowerCase().includes("change_requests");
+          if (missingQueue) {
+            console.warn("Approval queue missing; saving directly.", err);
+            await saveDirect();
+            closeModal();
+            toast.success("Saved directly (approval queue not set up yet).");
+            return;
+          }
+          throw err;
+        }
+      }
+
+      await saveDirect();
       closeModal();
     } catch (err) {
       console.error(err);
-      toast.error("Could not save item");
+      toast.error(err?.message || "Could not save item");
     }
   };
 
@@ -126,9 +166,22 @@ export default function MenuPage() {
     if (!confirm("Delete this item?")) return;
 
     try {
-      await MenuStorage.deleteMenuItem(id);
-      await loadMenu();
-      toast.success("Item deleted");
+      const item = safeMenuItems.find((i) => i.id === id);
+      if (requiresApproval) {
+        await ChangeRequests.submit({
+          user,
+          entityType: 'menu_item',
+          entityId: id,
+          action: 'delete',
+          beforeData: item || null,
+          afterData: null,
+        });
+        toast.success("Deletion submitted for approval.");
+      } else {
+        await MenuStorage.deleteMenuItem(id);
+        await loadMenu();
+        toast.success("Item deleted");
+      }
     } catch (err) {
       console.error(err);
       toast.error("Failed to delete item");
@@ -203,6 +256,16 @@ export default function MenuPage() {
     setPrefixedMenu(null);
   };
 
+  const handleRequestAccess = async (reason) => {
+    try {
+      await submitEditRequest(reason);
+      toast.success("Request sent to admins");
+    } catch (err) {
+      console.error("Request access failed:", err);
+      toast.error(err?.message || "Could not submit request");
+    }
+  };
+
   // ----------------- Render -----------------
   return (
     <div className="min-h-screen bg-stone-50 pb-24 dark:bg-stone-900">
@@ -222,6 +285,16 @@ export default function MenuPage() {
           </div>
         }
       />
+
+      {requiresApproval && !accessLoading && (
+        <div className="px-4 pt-3">
+          <EditAccessRequest
+            request={editRequest}
+            onSubmit={handleRequestAccess}
+            message="Only admins can create or remove menu items. Submit a request to temporarily gain edit rights."
+          />
+        </div>
+      )}
 
       {/* Category Filter */}
       <div className="sticky top-14 z-30 px-4 py-3 bg-stone-50 dark:bg-stone-900 border-b border-stone-100 dark:border-stone-800">
@@ -295,19 +368,36 @@ export default function MenuPage() {
                     >
                       <Checkbox
                         checked={!!item.is_unavailable}
-                        onCheckedChange={(checked) => {
-                          const next = MenuStorage.setUnavailable(item.id, checked);
-                          setUnavailableMap(next);
-                          setMenuItems((prev) =>
-                            (prev || []).map((i) =>
-                              i.id === item.id ? { ...i, is_unavailable: !!checked } : i
-                            )
-                          );
-                          setCtxMenuItems?.((prev) =>
-                            (prev || []).map((i) =>
-                              i.id === item.id ? { ...i, is_unavailable: !!checked } : i
-                            )
-                          );
+                        onCheckedChange={async (checked) => {
+                          try {
+                            if (requiresApproval) {
+                              await ChangeRequests.submit({
+                                user,
+                                entityType: 'menu_item',
+                                entityId: item.id,
+                                action: 'availability',
+                                beforeData: { ...item, is_unavailable: item.is_unavailable },
+                                afterData: { ...item, is_unavailable: !!checked },
+                              });
+                              toast.success("Availability change submitted for approval.");
+                              return;
+                            }
+                            const next = MenuStorage.setUnavailable(item.id, checked);
+                            setUnavailableMap(next);
+                            setMenuItems((prev) =>
+                              (prev || []).map((i) =>
+                                i.id === item.id ? { ...i, is_unavailable: !!checked } : i
+                              )
+                            );
+                            setCtxMenuItems?.((prev) =>
+                              (prev || []).map((i) =>
+                                i.id === item.id ? { ...i, is_unavailable: !!checked } : i
+                              )
+                            );
+                          } catch (err) {
+                            console.error('Toggle availability failed:', err);
+                            toast.error(err?.message || 'Could not change availability');
+                          }
                         }}
                       />
                       <span>{item.is_unavailable ? "Unavailable" : "Available"}</span>
@@ -550,11 +640,11 @@ export default function MenuPage() {
             </div>
           )}
           <DialogFooter className="flex justify-end gap-2">
-            {detailModal.item && (
-              <Button onClick={() => openEditModal(detailModal.item)} className="bg-amber-700 hover:bg-amber-800" size="icon" aria-label="Edit item">
-                <Pencil className="h-4 w-4" />
-              </Button>
-            )}
+          {detailModal.item && (
+            <Button onClick={() => openEditModal(detailModal.item)} className="bg-amber-700 hover:bg-amber-800" size="icon" aria-label="Edit item">
+              <Pencil className="h-4 w-4" />
+            </Button>
+          )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

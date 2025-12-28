@@ -20,12 +20,21 @@ import { GuestStorage } from '@/api/localStorageHelpers/guests';
 import { MenuStorage } from '@/api/localStorageHelpers/menu';
 import { OrderStorage } from '@/api/localStorageHelpers/orders';
 import { AppContext } from '@/context/AppContext';
+import EditAccessRequest from '@/components/common/EditAccessRequest';
+import { ChangeRequests } from '@/api/changeRequests';
 
 export default function TableDetails() {
   const urlParams = new URLSearchParams(window.location.search);
   const tableId = urlParams.get('id');
 
-  const { menuItems: ctxMenuItems } = useContext(AppContext);
+  const {
+    menuItems: ctxMenuItems,
+    requiresApproval,
+    editRequest,
+    submitEditRequest,
+    accessLoading,
+    user,
+  } = useContext(AppContext);
 
   const [table, setTable] = useState(null);
   const [guests, setGuests] = useState([]);
@@ -48,16 +57,20 @@ export default function TableDetails() {
   // Load table info
   useEffect(() => {
     if (!tableId) return;
-    const t = TableStorage.getTable(tableId);
-    setTable(t);
+    (async () => {
+      const t = await TableStorage.getTable(tableId);
+      setTable(t);
+    })();
   }, [tableId]);
 
   // Load guests
   useEffect(() => {
     if (!tableId) return;
-    const gs = GuestStorage.getGuests(tableId);
-    setGuests(gs);
-    if (gs.length > 0 && !activeGuestId) setActiveGuestId(gs[0].id);
+    (async () => {
+      const gs = await GuestStorage.getGuests(tableId);
+      setGuests(gs);
+      if (gs.length > 0 && !activeGuestId) setActiveGuestId(gs[0].id);
+    })();
   }, [tableId]);
 
   // Load menu items (initial) and sync with context updates
@@ -106,8 +119,10 @@ export default function TableDetails() {
   // Load existing orders
   useEffect(() => {
     if (!tableId) return;
-    const items = OrderStorage.getOrderItemsByTable(tableId);
-    setOrderItems(items);
+    (async () => {
+      const items = await OrderStorage.getOrderItemsByTable(tableId);
+      setOrderItems(items);
+    })();
   }, [tableId]);
 
   const activeGuest = guests.find(g => g.id === activeGuestId);
@@ -155,29 +170,42 @@ export default function TableDetails() {
     return null;
   };
 
-  const handleAddGuest = () => {
+  const handleAddGuest = async () => {
     const newGuestNumber = guests.length + 1;
-    const newGuest = GuestStorage.createGuest({
+    const newGuest = await GuestStorage.createGuest({
       table_id: tableId,
       guest_number: newGuestNumber,
     });
-    TableStorage.updateTable(tableId, { guest_count: newGuestNumber, status: 'occupied' });
+    await TableStorage.updateTable(tableId, { guest_count: newGuestNumber, status: 'occupied' });
     setGuests(prev => [...prev, newGuest]);
-    setTable(TableStorage.getTable(tableId));
+    setTable(await TableStorage.getTable(tableId));
   };
 
-  const handleSaveGuest = (guestData) => {
-    GuestStorage.updateGuest(guestData.id, guestData);
-    setGuests(GuestStorage.getGuests(tableId));
+  const handleSaveGuest = async (guestData) => {
+    await GuestStorage.updateGuest(guestData.id, guestData);
+    setGuests(await GuestStorage.getGuests(tableId));
   };
 
-  const handleSaveTable = (tableData) => {
-    TableStorage.updateTable(tableData.id, tableData);
-    setTable(TableStorage.getTable(tableData.id));
+  const handleSaveTable = async (tableData) => {
+    if (requiresApproval) {
+      const before = table;
+      await ChangeRequests.submit({
+        user,
+        entityType: 'table',
+        entityId: tableData.id,
+        action: 'update',
+        beforeData: before,
+        afterData: tableData,
+      });
+      toast.success('Changes submitted for approval. They will apply after admin review.');
+    } else {
+      await TableStorage.updateTable(tableData.id, tableData);
+      setTable(await TableStorage.getTable(tableData.id));
+    }
   };
 
-  const handleAddToOrder = (itemData) => {
-    const orderItem = OrderStorage.createOrderItem({
+  const handleAddToOrder = async (itemData) => {
+    const orderItem = await OrderStorage.createOrderItem({
       ...itemData,
       table_id: tableId,
       guest_id: activeGuestId,
@@ -187,24 +215,34 @@ export default function TableDetails() {
     toast.success(`Added ${itemData.menu_item_name}`);
   };
 
-  const handleRemoveFromOrder = (menuItemId) => {
+  const handleRemoveFromOrder = async (menuItemId) => {
     const item = orderItems.find(i => i.menu_item_id === menuItemId && i.guest_id === activeGuestId);
     if (item) {
-      OrderStorage.deleteOrderItem(item.id);
+      await OrderStorage.deleteOrderItem(item.id);
       setOrderItems(prev => prev.filter(i => i.id !== item.id));
       toast.success('Item removed');
     }
   };
 
-  const handleRemoveItem = (index) => {
+  const handleRemoveItem = async (index) => {
     const item = orderItems[index];
-    if (item) OrderStorage.deleteOrderItem(item.id);
+    if (item) await OrderStorage.deleteOrderItem(item.id);
     setOrderItems(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handleUpdateCourse = (orderItemId, course) => {
-    OrderStorage.updateOrderItem(orderItemId, { course });
+  const handleUpdateCourse = async (orderItemId, course) => {
+    await OrderStorage.updateOrderItem(orderItemId, { course });
     setOrderItems(prev => prev.map(i => i.id === orderItemId ? { ...i, course } : i));
+  };
+
+  const handleRequestAccess = async (reason) => {
+    try {
+      await submitEditRequest(reason);
+      toast.success('Request sent to admins');
+    } catch (err) {
+      console.error('Request access failed:', err);
+      toast.error(err?.message || 'Could not submit request');
+    }
   };
 
   const openEditOrder = (item) => {
@@ -216,10 +254,10 @@ export default function TableDetails() {
     });
   };
 
-  const saveEditOrder = () => {
+  const saveEditOrder = async () => {
     const item = editOrderModal.item;
     if (!item) return;
-    OrderStorage.updateOrderItem(item.id, { custom_notes: editOrderModal.notes, modifications: editOrderModal.mods || [] });
+    await OrderStorage.updateOrderItem(item.id, { custom_notes: editOrderModal.notes, modifications: editOrderModal.mods || [] });
     setOrderItems(prev => prev.map(i => i.id === item.id ? { ...i, custom_notes: editOrderModal.notes, modifications: editOrderModal.mods || [] } : i));
     setEditOrderModal({ open: false, item: null, notes: '', mods: [] });
     toast.success('Item updated');
@@ -241,6 +279,15 @@ export default function TableDetails() {
     <div className="min-h-screen bg-stone-50 pb-24">
       {/* Main content: stacked full-width sections */}
       <div className="px-0 pb-4 space-y-6">
+        {requiresApproval && !accessLoading && (
+          <div className="px-4 pt-3">
+            <EditAccessRequest
+              request={editRequest}
+              onSubmit={handleRequestAccess}
+              message="You can view orders, but table settings are locked to admins. Request edit access if you need to change budgets, notes, or table details."
+            />
+          </div>
+        )}
         {/* Guests */}
         <div className="w-full sticky top-0 z-50 bg-stone-50 dark:bg-stone-900 border-b border-stone-200 dark:border-stone-800">
           {/* Table header (sticky) */}
@@ -373,14 +420,33 @@ export default function TableDetails() {
                   touchStartX.current = null;
                 }}
               >
-                {Object.entries(
-                  filteredMenuItems.reduce((acc, item) => {
+                {(() => {
+                  const categoryOrder = [
+                    'appetizers',
+                    'salads',
+                    'caviar',
+                    'chilled_seafood',
+                    'steaks',
+                    'main_courses',
+                    'sides',
+                    'additions',
+                    'sauces',
+                  ];
+                  const grouped = filteredMenuItems.reduce((acc, item) => {
                     const key = item.category || item.category_slug || 'other';
                     acc[key] = acc[key] || [];
                     acc[key].push(item);
                     return acc;
-                  }, {})
-                ).map(([cat, items]) => (
+                  }, {});
+                  const ordered = Object.entries(grouped).sort(([aKey], [bKey]) => {
+                    const ai = categoryOrder.indexOf(aKey);
+                    const bi = categoryOrder.indexOf(bKey);
+                    if (ai === -1 && bi === -1) return aKey.localeCompare(bKey);
+                    if (ai === -1) return 1;
+                    if (bi === -1) return -1;
+                    return ai - bi;
+                  });
+                  return ordered.map(([cat, items]) => (
                   <div key={cat} className="space-y-2">
                     <h3 className="font-semibold text-stone-900 capitalize px-1">{cat}</h3>
                     <div className="space-y-2">
@@ -400,37 +466,42 @@ export default function TableDetails() {
                             onEditSelected={openEditOrder}
                             isExpanded={expandedItem === item.id}
                             onToggleExpand={(id) => setExpandedItem(id)}
-                            onAddToOrder={(data) => {
+                            onAddToOrder={async (data) => {
                               if (!activeGuestId) {
                                 toast.error('Select a guest first');
                                 return;
                               }
-                              const orderItem = OrderStorage.createOrderItem({
-                                ...data,
-                                table_id: tableId,
-                                guest_id: activeGuestId,
-                                status: 'pending',
-                              });
-                              setOrderItems(prev => [...prev, orderItem]);
-                              toast.success(`Added ${data.menu_item_name}`);
+                              try {
+                                const orderItem = await OrderStorage.createOrderItem({
+                                  ...data,
+                                  table_id: tableId,
+                                  guest_id: activeGuestId,
+                                  status: 'pending',
+                                });
+                                setOrderItems(prev => [...prev, orderItem]);
+                                toast.success(`Added ${data.menu_item_name}`);
+                              } catch (err) {
+                                console.error('Add item failed:', err);
+                                toast.error(err?.message || 'Could not add item');
+                              }
                             }}
-                            onRemoveFromOrder={(menuItemId) => {
+                            onRemoveFromOrder={async (menuItemId) => {
                               if (!activeGuestId) return;
                               const itemToRemove = guestOrderItems.find(i => i.menu_item_id === menuItemId);
                               if (!itemToRemove) return;
-                              OrderStorage.deleteOrderItem(itemToRemove.id);
+                              await OrderStorage.deleteOrderItem(itemToRemove.id);
                               setOrderItems(prev => prev.filter(i => i.id !== itemToRemove.id));
                               toast.success('Removed item');
                             }}
-                            onUpdateQuantity={(menuItemId, qty) => {
+                            onUpdateQuantity={async (menuItemId, qty) => {
                               if (!activeGuestId) return;
                               const itemToUpdate = guestOrderItems.find(i => i.menu_item_id === menuItemId);
                               if (!itemToUpdate) return;
                               if (qty <= 0) {
-                                OrderStorage.deleteOrderItem(itemToUpdate.id);
+                                await OrderStorage.deleteOrderItem(itemToUpdate.id);
                                 setOrderItems(prev => prev.filter(i => i.id !== itemToUpdate.id));
                               } else {
-                                OrderStorage.updateOrderItem(itemToUpdate.id, { quantity: qty });
+                                await OrderStorage.updateOrderItem(itemToUpdate.id, { quantity: qty });
                                 setOrderItems(prev => prev.map(i => i.id === itemToUpdate.id ? { ...i, quantity: qty } : i));
                               }
                             }}
@@ -439,7 +510,8 @@ export default function TableDetails() {
                       })}
                     </div>
                   </div>
-                ))}
+                  ));
+                })()}
               </div>
             ) : (
             <div
@@ -523,38 +595,43 @@ export default function TableDetails() {
                                     onEditSelected={openEditOrder}
                                     isExpanded={expandedItem === syntheticItem.id}
                                     onToggleExpand={(id) => setExpandedItem(id)}
-                                    onAddToOrder={(data) => {
+                                    onAddToOrder={async (data) => {
                                       if (!activeGuestId) {
                                         toast.error('Select a guest first');
                                         return;
                                       }
                                       const existing = guestOrderItems.find(i => i.course === course.course);
                                       if (existing) {
-                                        OrderStorage.deleteOrderItem(existing.id);
+                                        await OrderStorage.deleteOrderItem(existing.id);
                                         setOrderItems(prev => prev.filter(i => i.id !== existing.id));
                                       }
-                                      const orderItem = OrderStorage.createOrderItem({
-                                        ...data,
-                                        table_id: tableId,
-                                        guest_id: activeGuestId,
-                                        status: 'pending',
-                                        course: course.course,
-                                      });
-                                      setOrderItems(prev => [...prev, orderItem]);
-                                      setCollapsedCourses(prev => ({
-                                        ...prev,
-                                        [activeGuestId]: {
-                                          ...(prev[activeGuestId] || {}),
-                                          [course.course]: true,
-                                        },
-                                      }));
-                                      toast.success(`Added ${data.menu_item_name}`);
+                                      try {
+                                        const orderItem = await OrderStorage.createOrderItem({
+                                          ...data,
+                                          table_id: tableId,
+                                          guest_id: activeGuestId,
+                                          status: 'pending',
+                                          course: course.course,
+                                        });
+                                        setOrderItems(prev => [...prev, orderItem]);
+                                        setCollapsedCourses(prev => ({
+                                          ...prev,
+                                          [activeGuestId]: {
+                                            ...(prev[activeGuestId] || {}),
+                                            [course.course]: true,
+                                          },
+                                        }));
+                                        toast.success(`Added ${data.menu_item_name}`);
+                                      } catch (err) {
+                                        console.error('Add course item failed:', err);
+                                        toast.error(err?.message || 'Could not add item');
+                                      }
                                     }}
-                                    onRemoveFromOrder={(menuItemId) => {
+                                    onRemoveFromOrder={async (menuItemId) => {
                                       if (!activeGuestId) return;
                                       const itemToRemove = guestOrderItems.find(i => i.course === course.course);
                                       if (!itemToRemove) return;
-                                      OrderStorage.deleteOrderItem(itemToRemove.id);
+                                      await OrderStorage.deleteOrderItem(itemToRemove.id);
                                       setOrderItems(prev => prev.filter(i => i.id !== itemToRemove.id));
                                       setCollapsedCourses(prev => ({
                                         ...prev,
@@ -565,12 +642,12 @@ export default function TableDetails() {
                                       }));
                                       toast.success('Removed item');
                                     }}
-                                    onUpdateQuantity={(menuItemId, qty) => {
+                                    onUpdateQuantity={async (menuItemId, qty) => {
                                       if (!activeGuestId) return;
                                       const itemToUpdate = guestOrderItems.find(i => i.course === course.course && i.menu_item_id === menuItemId);
                                       if (!itemToUpdate) return;
                                       if (qty <= 0) {
-                                        OrderStorage.deleteOrderItem(itemToUpdate.id);
+                                        await OrderStorage.deleteOrderItem(itemToUpdate.id);
                                         setOrderItems(prev => prev.filter(i => i.id !== itemToUpdate.id));
                                         setCollapsedCourses(prev => ({
                                           ...prev,
@@ -580,7 +657,7 @@ export default function TableDetails() {
                                           },
                                         }));
                                       } else {
-                                        OrderStorage.updateOrderItem(itemToUpdate.id, { quantity: qty });
+                                        await OrderStorage.updateOrderItem(itemToUpdate.id, { quantity: qty });
                                         setOrderItems(prev => prev.map(i => i.id === itemToUpdate.id ? { ...i, quantity: qty } : i));
                                       }
                                     }}

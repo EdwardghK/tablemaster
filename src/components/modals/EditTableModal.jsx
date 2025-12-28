@@ -40,12 +40,16 @@ export default function EditTableModal({ open, onClose, table, sections, onSave,
   }, [table]);
 
   const handleSave = async () => {
+    const toNumOrNull = (val) =>
+      val === '' || val === null || val === undefined ? null : Number(val);
+
     const payload = {
       ...table,
       ...formData,
-      budget_total: formData.budget_total === '' ? '' : Number(formData.budget_total),
-      budget_per_guest: formData.budget_per_guest === '' ? '' : Number(formData.budget_per_guest),
-      tax_rate: formData.tax_rate === '' ? '' : Number(formData.tax_rate),
+      guest_count: Number(formData.guest_count) || 0,
+      budget_total: toNumOrNull(formData.budget_total),
+      budget_per_guest: toNumOrNull(formData.budget_per_guest),
+      tax_rate: toNumOrNull(formData.tax_rate),
       budget_include_tax: !!formData.budget_include_tax,
     };
     const savedTable = await onSave(payload);

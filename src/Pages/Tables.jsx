@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import Header from '@/components/common/Header';
 import BottomNav from '@/components/common/BottomNav';
 import TableCard from '@/components/common/tables/TableCard.jsx';
@@ -10,11 +10,16 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { TableStorage } from '@/api/localStorageHelpers/tables';
 import { GuestStorage } from '@/api/localStorageHelpers/guests';
 import { OrderStorage } from '@/api/localStorageHelpers/orders';
+import { AppContext } from '@/context/AppContext';
+import EditAccessRequest from '@/components/common/EditAccessRequest';
+import { toast } from 'sonner';
+import { ChangeRequests } from '@/api/changeRequests';
 
 export default function Tables() {
   const [searchQuery, setSearchQuery] = useState('');
   const [editModal, setEditModal] = useState({ open: false, table: null });
-  
+  const { requiresApproval, editRequest, submitEditRequest, accessLoading, user } = useContext(AppContext);
+
   const [tables, setTables] = useState([]);
   const [guests, setGuests] = useState([]);
   const [orderItems, setOrderItems] = useState([]);
@@ -22,14 +27,22 @@ export default function Tables() {
 
   // Load tables, guests, orders from localStorage
   useEffect(() => {
-    setLoading(true);
-    const t = TableStorage.getAllTables();
-    const g = GuestStorage.getAllGuests();
-    const o = OrderStorage.getAllOrderItems();
-    setTables(t);
-    setGuests(g);
-    setOrderItems(o);
-    setLoading(false);
+    const load = async () => {
+      try {
+        setLoading(true);
+        const [t, g, o] = await Promise.all([
+          TableStorage.getAllTables(),
+          GuestStorage.getAllGuests(),
+          OrderStorage.getAllOrderItems(),
+        ]);
+        setTables(t);
+        setGuests(g);
+        setOrderItems(o);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
   }, []);
 
   const filteredTables = tables.filter(table => {
@@ -49,22 +62,35 @@ export default function Tables() {
     return tableGuests.some(g => (g.allergens?.length > 0 || g.custom_allergens?.length > 0));
   };
 
-  const handleSaveTable = (tableData) => {
+  const handleSaveTable = async (tableData) => {
     try {
       const payload = {
         ...tableData,
         guest_count: Number.isFinite(Number(tableData.guest_count)) ? Number(tableData.guest_count) : 0,
         status: tableData.status || 'available',
       };
-      let savedTable;
-      if (payload.id) {
-        TableStorage.updateTable(payload.id, payload);
-        savedTable = payload;
+      if (requiresApproval) {
+        const before = payload.id ? tables.find(t => t.id === payload.id) : null;
+        await ChangeRequests.submit({
+          user,
+          entityType: 'table',
+          entityId: payload.id || payload.table_number || 'new',
+          action: payload.id ? 'update' : 'create',
+          beforeData: before,
+          afterData: payload,
+        });
+        toast.success('Submitted for approval. Changes will apply after admin review.');
+        return payload;
       } else {
-        savedTable = TableStorage.createTable(payload);
+        let savedTable;
+        if (payload.id) {
+          savedTable = await TableStorage.updateTable(payload.id, payload);
+        } else {
+          savedTable = await TableStorage.createTable(payload);
+        }
+        setTables(await TableStorage.getAllTables());
+        return savedTable;
       }
-      setTables(TableStorage.getAllTables());
-      return savedTable;
     } catch (err) {
       console.error('Failed to save table:', err);
       window.alert(err?.message || 'Could not save table');
@@ -72,24 +98,47 @@ export default function Tables() {
     }
   };
 
-  const handleCreateGuests = (table, guestCount) => {
+  const handleCreateGuests = async (table, guestCount) => {
+    const tasks = [];
     for (let i = 1; i <= guestCount; i++) {
-      GuestStorage.createGuest({
+      tasks.push(GuestStorage.createGuest({
         table_id: table.id,
         guest_number: i,
-      });
+      }));
     }
-    setGuests(GuestStorage.getAllGuests());
+    await Promise.all(tasks);
+    setGuests(await GuestStorage.getAllGuests());
   };
 
-  const handleDeleteTable = (table) => {
+  const handleDeleteTable = async (table) => {
     const confirmed = window.confirm(`Delete table ${table.table_number || ''}?`);
     if (!confirmed) return;
-    TableStorage.deleteTable(table.id);
-    // Clean up guests/orders linked to this table
-    setGuests((prev) => prev.filter((g) => g.table_id !== table.id));
-    setOrderItems((prev) => prev.filter((o) => o.table_id !== table.id));
-    setTables(TableStorage.getAllTables());
+    if (requiresApproval) {
+      await ChangeRequests.submit({
+        user,
+        entityType: 'table',
+        entityId: table.id,
+        action: 'delete',
+        beforeData: table,
+        afterData: null,
+      });
+      toast.success('Deletion submitted for approval. Table will be removed after admin review.');
+    } else {
+      await TableStorage.deleteTable(table.id);
+      setGuests((prev) => prev.filter((g) => g.table_id !== table.id));
+      setOrderItems((prev) => prev.filter((o) => o.table_id !== table.id));
+      setTables(await TableStorage.getAllTables());
+    }
+  };
+
+  const handleRequestAccess = async (reason) => {
+    try {
+      await submitEditRequest(reason);
+      toast.success('Request sent to admins');
+    } catch (err) {
+      console.error('Request access failed:', err);
+      toast.error(err?.message || 'Could not submit request');
+    }
   };
 
   return (
@@ -111,7 +160,9 @@ export default function Tables() {
 
           <div>
             <Button 
-              onClick={() => setEditModal({ open: true, table: {} })}
+              onClick={() => {
+                setEditModal({ open: true, table: {} });
+              }}
               size="sm"
               className="bg-amber-700 hover:bg-amber-800 rounded-lg"
             >
@@ -121,6 +172,16 @@ export default function Tables() {
         </div>
 
       </div>
+
+      {requiresApproval && !accessLoading && (
+        <div className="px-4 py-3">
+          <EditAccessRequest
+            request={editRequest}
+            onSubmit={handleRequestAccess}
+            message="You can browse tables, but only admins can add, edit, or delete. Submit a request and an admin can grant temporary edit access."
+          />
+        </div>
+      )}
 
       {/* Tables Grid */}
       <div className="p-4 space-y-6">
@@ -147,7 +208,9 @@ export default function Tables() {
             {filteredTables.length === 0 && (
               <div className="text-center py-12">
                 <Button
-                  onClick={() => setEditModal({ open: true, table: {} })}
+                  onClick={() => {
+                    setEditModal({ open: true, table: {} });
+                  }}
                   className="bg-amber-700 hover:bg-amber-800 rounded-2xl px-6 py-4 text-base"
                 >
                   Create New Table

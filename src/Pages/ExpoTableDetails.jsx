@@ -2,9 +2,9 @@ import React, { useEffect, useState } from "react";
 import Header from "@/components/common/Header";
 import BottomNav from "@/components/common/BottomNav";
 import { Skeleton } from "@/components/ui/skeleton";
-import { TableStorage } from "@/api/localStorageHelpers/tables";
-import { GuestStorage } from "@/api/localStorageHelpers/guests";
-import { OrderStorage } from "@/api/localStorageHelpers/orders";
+import { TableStorageShared } from "@/api/localStorageHelpers/tables.shared";
+import { GuestStorageShared } from "@/api/localStorageHelpers/guests.shared";
+import { OrderStorageShared } from "@/api/localStorageHelpers/orders.shared";
 import { cn } from "@/utils";
 
 export default function ExpoTableDetails() {
@@ -17,9 +17,16 @@ export default function ExpoTableDetails() {
 
   useEffect(() => {
     if (!tableId) return;
-    setTable(TableStorage.getTable(tableId));
-    setGuests(GuestStorage.getGuests(tableId));
-    setOrderItems(OrderStorage.getOrderItemsByTable(tableId));
+    (async () => {
+      const [t, g, o] = await Promise.all([
+        TableStorageShared.getTable(tableId),
+        GuestStorageShared.getGuests(tableId),
+        OrderStorageShared.getOrderItemsByTable(tableId),
+      ]);
+      setTable(t);
+      setGuests(g);
+      setOrderItems(o);
+    })();
   }, [tableId]);
 
   if (!table) {

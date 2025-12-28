@@ -1,56 +1,152 @@
-const ORDERS_KEY = 'tablemaster_orders';
-const ORDER_ITEMS_KEY = 'tablemaster_order_items';
+import { supabase } from "@/supabase";
+
+// Ensure we have a user session; fall back to anonymous or shared creds.
+async function requireUser() {
+  // Existing session
+  let { data } = await supabase.auth.getUser();
+  if (data?.user) return data.user;
+
+  // Anonymous sign-in (if enabled)
+  try {
+    const { data: anonData } = await supabase.auth.signInAnonymously?.();
+    if (anonData?.session?.user) {
+      const { data: refreshed } = await supabase.auth.getUser();
+      if (refreshed?.user) return refreshed.user;
+    }
+  } catch (_) { /* ignore */ }
+
+  // Fallback email/password (set in .env as VITE_DEMO_USER_EMAIL / VITE_DEMO_USER_PASSWORD)
+  const fallbackEmail = import.meta.env.VITE_DEMO_USER_EMAIL;
+  const fallbackPassword = import.meta.env.VITE_DEMO_USER_PASSWORD;
+  if (fallbackEmail && fallbackPassword) {
+    const { data: pwData } = await supabase.auth.signInWithPassword({
+      email: fallbackEmail,
+      password: fallbackPassword,
+    });
+    if (pwData?.user) return pwData.user;
+  }
+
+  ({ data } = await supabase.auth.getUser());
+  if (data?.user) return data.user;
+  throw new Error("Must be signed in");
+}
 
 export const OrderStorage = {
   // Orders
-  getOrdersByTable: (tableId) => {
-    const all = JSON.parse(localStorage.getItem(ORDERS_KEY) || '[]');
-    return all.filter(o => o.table_id === tableId);
+  async getOrdersByTable(tableId) {
+    const user = await requireUser();
+    const { data, error } = await supabase
+      .from("orders")
+      .select("*")
+      .eq("table_id", tableId)
+      .eq("owner_id", user.id)
+      .order("created_at", { ascending: true });
+    if (error) throw error;
+    return data || [];
   },
-  getAllOrders: () => JSON.parse(localStorage.getItem(ORDERS_KEY) || '[]'),
-  createOrder: (order) => {
-    const all = JSON.parse(localStorage.getItem(ORDERS_KEY) || '[]');
-    const newOrder = { ...order, id: Date.now().toString() };
-    all.push(newOrder);
-    localStorage.setItem(ORDERS_KEY, JSON.stringify(all));
-    return newOrder;
+
+  async getAllOrders() {
+    const user = await requireUser();
+    const { data, error } = await supabase
+      .from("orders")
+      .select("*")
+      .eq("owner_id", user.id)
+      .order("created_at", { ascending: true });
+    if (error) throw error;
+    return data || [];
   },
-  updateOrder: (id, data) => {
-    const all = JSON.parse(localStorage.getItem(ORDERS_KEY) || '[]');
-    const updated = all.map(o => (o.id === id ? { ...o, ...data } : o));
-    localStorage.setItem(ORDERS_KEY, JSON.stringify(updated));
-    return updated.find(o => o.id === id);
+
+  async createOrder(order) {
+    const user = await requireUser();
+    const { data, error } = await supabase
+      .from("orders")
+      .insert([{ ...order, owner_id: user.id }])
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
   },
-  deleteOrder: (id) => {
-    const all = JSON.parse(localStorage.getItem(ORDERS_KEY) || '[]');
-    const filtered = all.filter(o => o.id !== id);
-    localStorage.setItem(ORDERS_KEY, JSON.stringify(filtered));
-    return filtered;
+
+  async updateOrder(id, data) {
+    const user = await requireUser();
+    const { data: row, error } = await supabase
+      .from("orders")
+      .update({ ...data, owner_id: user.id })
+      .eq("id", id)
+      .eq("owner_id", user.id)
+      .select()
+      .single();
+    if (error) throw error;
+    return row;
+  },
+
+  async deleteOrder(id) {
+    const user = await requireUser();
+    const { error } = await supabase
+      .from("orders")
+      .delete()
+      .eq("id", id)
+      .eq("owner_id", user.id);
+    if (error) throw error;
+    return true;
   },
 
   // Order Items
-  getOrderItemsByTable: (tableId) => {
-    const all = JSON.parse(localStorage.getItem(ORDER_ITEMS_KEY) || '[]');
-    return all.filter(i => i.table_id === tableId);
+  async getOrderItemsByTable(tableId) {
+    const user = await requireUser();
+    const { data, error } = await supabase
+      .from("order_items")
+      .select("*")
+      .eq("table_id", tableId)
+      .eq("owner_id", user.id)
+      .order("created_at", { ascending: true });
+    if (error) throw error;
+    return data || [];
   },
-  getAllOrderItems: () => JSON.parse(localStorage.getItem(ORDER_ITEMS_KEY) || '[]'),
-  createOrderItem: (item) => {
-    const all = JSON.parse(localStorage.getItem(ORDER_ITEMS_KEY) || '[]');
-    const newItem = { ...item, id: `${Date.now().toString()}-${Math.random().toString(36).slice(2,8)}` };
-    all.push(newItem);
-    localStorage.setItem(ORDER_ITEMS_KEY, JSON.stringify(all));
-    return newItem;
+
+  async getAllOrderItems() {
+    const user = await requireUser();
+    const { data, error } = await supabase
+      .from("order_items")
+      .select("*")
+      .eq("owner_id", user.id)
+      .order("created_at", { ascending: true });
+    if (error) throw error;
+    return data || [];
   },
-  updateOrderItem: (id, data) => {
-    const all = JSON.parse(localStorage.getItem(ORDER_ITEMS_KEY) || '[]');
-    const updated = all.map(i => (i.id === id ? { ...i, ...data } : i));
-    localStorage.setItem(ORDER_ITEMS_KEY, JSON.stringify(updated));
-    return updated.find(i => i.id === id);
+
+  async createOrderItem(item) {
+    const user = await requireUser();
+    const { data, error } = await supabase
+      .from("order_items")
+      .insert([{ ...item, owner_id: user.id }])
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
   },
-  deleteOrderItem: (id) => {
-    const all = JSON.parse(localStorage.getItem(ORDER_ITEMS_KEY) || '[]');
-    const filtered = all.filter(i => i.id !== id);
-    localStorage.setItem(ORDER_ITEMS_KEY, JSON.stringify(filtered));
-    return filtered;
+
+  async updateOrderItem(id, data) {
+    const user = await requireUser();
+    const { data: row, error } = await supabase
+      .from("order_items")
+      .update({ ...data, owner_id: user.id })
+      .eq("id", id)
+      .eq("owner_id", user.id)
+      .select()
+      .single();
+    if (error) throw error;
+    return row;
+  },
+
+  async deleteOrderItem(id) {
+    const user = await requireUser();
+    const { error } = await supabase
+      .from("order_items")
+      .delete()
+      .eq("id", id)
+      .eq("owner_id", user.id);
+    if (error) throw error;
+    return true;
   },
 };

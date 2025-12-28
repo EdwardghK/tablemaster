@@ -39,36 +39,49 @@ export const MenuStorage = {
 
   async getMenuItems() {
     let data;
-    try {
-      // Pull items with their category and first price (if present)
-      const { data: supaData, error } = await supabase
-        .from("menu_items")
-        .select(`
-          id, category, category_id, name, description, origin, notes, allergens, common_mods, created_at,
-          menu_categories:menu_categories!menu_items_category_id_fkey ( id, slug, name, sort_order ),
-          menu_prices:menu_prices!menu_prices_item_id_fkey ( price, currency ),
-          menu_item_options:menu_item_options!menu_item_options_item_id_fkey (
-            id,
-            menu_prices:menu_prices!menu_prices_option_id_fkey ( price, currency )
-          )
-        `)
-        .order("created_at", { ascending: false });
+    // Pull items with their category and first price (if present)
+    const { data: supaData, error } = await supabase
+      .from("menu_items")
+      .select(`
+        id, category, category_id, name, description, origin, notes, allergens, common_mods, created_at, price,
+        menu_categories:menu_categories!menu_items_category_id_fkey ( id, slug, name, sort_order ),
+        menu_prices:menu_prices!menu_prices_item_id_fkey ( price, currency ),
+        menu_item_options:menu_item_options!menu_item_options_item_id_fkey (
+          id,
+          menu_prices:menu_prices!menu_prices_option_id_fkey ( price, currency )
+        )
+      `)
+      .order("created_at", { ascending: false });
 
-      if (error) {
-        throw error;
-      }
-      data = supaData || [];
-    } catch (err) {
-      console.error("Supabase fetch error:", err);
-      const cached = readCache(MENU_CACHE_KEY);
-      if (cached) {
-        console.warn("Using cached menu items due to fetch error");
-        return cached;
-      }
-      throw err;
+    if (error) {
+      console.error("Supabase fetch error:", error);
+      throw error;
     }
+    data = supaData || [];
 
-    const items = data || [];
+    let items = data || [];
+
+    // Fallback: if some items came back without a price, pull prices directly from menu_prices
+    const missingPriceIds = items
+      .filter((item) => !item?.price && !(item?.menu_prices?.length))
+      .map((item) => item.id)
+      .filter(Boolean);
+    let priceMap = null;
+    if (missingPriceIds.length) {
+      try {
+        const { data: priceRows, error: priceErr } = await supabase
+          .from("menu_prices")
+          .select("item_id, price, currency")
+          .in("item_id", missingPriceIds);
+        if (priceErr) {
+          console.warn("Supabase menu_prices fallback fetch error:", priceErr);
+        } else {
+          priceMap = new Map(priceRows.map((r) => [r.item_id, r]));
+        }
+      } catch (err) {
+        console.warn("Supabase menu_prices fallback fetch exception:", err);
+      }
+    }
 
     // If some rows did not hydrate category via FK, fetch categories separately
     const needsCategories = items.some(
@@ -92,10 +105,17 @@ export const MenuStorage = {
       const category =
         item?.menu_categories ||
         (categoryMap ? categoryMap.get(item.category_id) : null);
-      const firstPrice = item?.menu_prices?.[0];
+      const priceRow =
+        (priceMap ? priceMap.get(item.id) : null) ||
+        (item?.menu_prices?.[0] || null);
+
+      // Prefer the base item price if present
+      const basePrice = item?.price;
+      const rowPrice = priceRow?.price;
+
       // fallback: use lowest option price if base price missing
       let optionPrice = null;
-      if (!firstPrice && item?.menu_item_options?.length) {
+      if (!basePrice && !rowPrice && item?.menu_item_options?.length) {
         const prices = item.menu_item_options
           .flatMap((opt) => opt.menu_prices || [])
           .filter(Boolean);
@@ -105,25 +125,31 @@ export const MenuStorage = {
           );
         }
       }
-      let priceToUse = firstPrice || optionPrice;
 
       // Clean name to strip trailing price artifacts (e.g., "... $105.00")
       const rawName = item.name || '';
       const priceMatch = rawName.match(/\$([\d.,]+)\s*$/);
       const cleanedName = rawName.replace(/\s+\$[\d.,]+\s*$/, '').trim();
-      if (!priceToUse && priceMatch) {
+
+      let numericPrice = Number(basePrice ?? rowPrice ?? optionPrice?.price ?? 0);
+      if ((!numericPrice || Number.isNaN(numericPrice)) && priceMatch) {
         const parsed = Number(priceMatch[1].replace(/,/g, ''));
         if (!Number.isNaN(parsed)) {
-          priceToUse = { price: parsed, currency: item.currency || 'CAD' };
+          numericPrice = parsed;
         }
       }
+
+      const categorySlug =
+        item.category ||
+        category?.slug ||
+        (category?.name ? category.name.toLowerCase().replace(/\s+/g, "_") : null);
 
       return {
         ...item,
         name: cleanedName || rawName,
-        price: priceToUse?.price ?? 0,
-        currency: priceToUse?.currency ?? "CAD",
-        category: item.category || category?.slug,
+        price: Number.isFinite(numericPrice) ? numericPrice : 0,
+        currency: item?.currency || priceRow?.currency || "CAD",
+        category: categorySlug,
         category_slug: category?.slug,
         category_name: category?.name,
         allergens: Array.isArray(item.allergens) ? item.allergens : [],
@@ -132,7 +158,6 @@ export const MenuStorage = {
       };
     });
 
-    writeCache(MENU_CACHE_KEY, normalized);
     return normalized;
   },
 
@@ -182,13 +207,19 @@ export const MenuStorage = {
     }
     const insertPayload = { ...rest, category_id: categoryId };
 
+    // Store price/currency on the base row for simpler fetching
+    if (typeof price !== "undefined") {
+      insertPayload.price = price;
+      insertPayload.currency = currency;
+    }
+
     const { data, error } = await supabase.from("menu_items").insert([insertPayload]).select().single();
     if (error) {
       console.error("Supabase insert error:", error);
       throw error;
     }
 
-    if (price && data?.id) {
+    if (typeof price !== "undefined" && data?.id) {
       const { error: priceErr } = await supabase
         .from("menu_prices")
         .insert([{ item_id: data.id, price, currency }]);
@@ -210,6 +241,10 @@ export const MenuStorage = {
       throw new Error("Category is required");
     }
     const updatePayload = { ...rest, category_id: categoryId };
+    if (typeof price !== "undefined") {
+      updatePayload.price = price;
+      updatePayload.currency = currency;
+    }
 
     const { data, error } = await supabase
       .from("menu_items")

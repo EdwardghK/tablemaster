@@ -2,9 +2,9 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import Header from "@/components/common/Header";
 import BottomNav from "@/components/common/BottomNav";
-import { TableStorage } from "@/api/localStorageHelpers/tables";
-import { GuestStorage } from "@/api/localStorageHelpers/guests";
-import { OrderStorage } from "@/api/localStorageHelpers/orders";
+import { TableStorageShared } from "@/api/localStorageHelpers/tables.shared";
+import { GuestStorageShared } from "@/api/localStorageHelpers/guests.shared";
+import { OrderStorageShared } from "@/api/localStorageHelpers/orders.shared";
 import { cn } from "@/utils";
 import { ArrowRight, Users, Clock } from "lucide-react";
 
@@ -14,9 +14,16 @@ export default function Expo() {
   const [orderItems, setOrderItems] = useState([]);
 
   useEffect(() => {
-    setTables(TableStorage.getAllTables());
-    setGuests(GuestStorage.getAllGuests());
-    setOrderItems(OrderStorage.getAllOrderItems());
+    (async () => {
+      const [t, g, o] = await Promise.all([
+        TableStorageShared.getAllTables(),
+        GuestStorageShared.getAllGuests(),
+        OrderStorageShared.getAllOrderItems(),
+      ]);
+      setTables(t);
+      setGuests(g);
+      setOrderItems(o);
+    })();
   }, []);
 
   const getGuestCount = (tableId) =>
@@ -75,7 +82,7 @@ export default function Expo() {
                 </div>
                 <div>
                   <div className="text-sm font-semibold text-stone-900">
-                    {table.section || "Unassigned section"}
+                    {table.owner_name || table.owner_email || (table.owner_id ? table.owner_id.slice(0, 8) + "…" : "Unknown user")}
                   </div>
                   <div className="flex items-center gap-3 text-xs text-stone-500">
                     <span className="flex items-center gap-1">

@@ -25,8 +25,9 @@ export default function MenuItemCard({
   const [quantity, setQuantity] = useState(1);
   const [selectedMods, setSelectedMods] = useState([]);
   const [customNotes, setCustomNotes] = useState('');
-  const [doneness, setDoneness] = useState('Medium Rare');
+  const [doneness, setDoneness] = useState('');
   const [carve, setCarve] = useState(false);
+  const STEAK_DONENESS = ['Blue', 'Rare', 'Med-rare', 'Med', 'Med-well', 'Well-done'];
 
   const matchingAllergens = item.allergens?.filter(a => 
     guestAllergens.includes(a)
@@ -45,6 +46,7 @@ export default function MenuItemCard({
       return;
     }
 
+    // No options: one-tap add
     if (!hasOptions) {
       onAddToOrder({
         menu_item_id: item.id,
@@ -58,7 +60,7 @@ export default function MenuItemCard({
       return;
     }
 
-    // Steaks require doneness/options; open the expanded panel.
+    // Steaks require selection: open the panel
     onToggleExpand(isExpanded ? null : item.id);
   };
 
@@ -66,6 +68,7 @@ export default function MenuItemCard({
     e.stopPropagation();
     const mods = [...selectedMods];
     if (item.category === 'steaks') {
+      if (!doneness) return;
       mods.push(`Doneness: ${doneness}`);
       if (carve) mods.push('Carve');
     }
@@ -228,10 +231,10 @@ export default function MenuItemCard({
           {/* Custom Notes / Doneness for steaks */}
           <div className="space-y-2">
             {item.category === 'steaks' && (
-              <div className="space-y-1">
+              <div className="space-y-2">
                 <span className="font-medium text-stone-700 dark:text-stone-200 text-sm">Doneness</span>
                 <div className="grid grid-cols-2 gap-2 text-sm">
-                  {['Rare','Medium Rare','Medium','Medium Well','Well Done'].map(level => (
+                  {STEAK_DONENESS.map(level => (
                     <label
                       key={level}
                       className="flex items-center gap-2 p-2 rounded-lg border border-stone-200 dark:border-stone-700 cursor-pointer hover:border-stone-300 dark:hover:border-stone-500"

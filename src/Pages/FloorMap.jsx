@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { cn } from '@/utils';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -26,13 +26,18 @@ export default function FloorMap() {
   const [sectionModal, setSectionModal] = useState(false);
   const [sectionFilter, setSectionFilter] = useState('all');
 
-  const [tables, setTables] = useState(TableStorage.getAllTables?.() || []);
+  const [tables, setTables] = useState([]);
   const [sections, setSections] = useState([]); // You can implement local sections similarly
   const [guests, setGuests] = useState([]);     // Optional: add TableStorage.getAllGuests()
 
-  const refetchTables = () => {
-    setTables(TableStorage.getAllTables());
+  const refetchTables = async () => {
+    const data = await TableStorage.getAllTables();
+    setTables(data);
   };
+
+  useEffect(() => {
+    refetchTables();
+  }, []);
 
   const filteredTables = sectionFilter === 'all' 
     ? tables 
@@ -49,7 +54,7 @@ export default function FloorMap() {
     e.dataTransfer.dropEffect = 'move';
   };
 
-  const handleDrop = (e) => {
+  const handleDrop = async (e) => {
     e.preventDefault();
     if (!draggedTable || !mapRef.current) return;
 
@@ -57,21 +62,21 @@ export default function FloorMap() {
     const x = ((e.clientX - rect.left) / rect.width) * 100;
     const y = ((e.clientY - rect.top) / rect.height) * 100;
 
-    TableStorage.updateTable(draggedTable.id, {
+    await TableStorage.updateTable(draggedTable.id, {
       position_x: Math.max(5, Math.min(95, x)),
       position_y: Math.max(5, Math.min(95, y)),
     });
 
-    refetchTables();
+    await refetchTables();
     setDraggedTable(null);
   };
 
-  const handleSaveTable = (tableData) => {
+  const handleSaveTable = async (tableData) => {
     const savedTable = tableData.id
-      ? TableStorage.updateTable(tableData.id, tableData)
-      : TableStorage.createTable({ ...tableData, position_x: 50, position_y: 50 });
+      ? await TableStorage.updateTable(tableData.id, tableData)
+      : await TableStorage.createTable({ ...tableData, position_x: 50, position_y: 50 });
 
-    refetchTables();
+    await refetchTables();
     return savedTable;
   };
 

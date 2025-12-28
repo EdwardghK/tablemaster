@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutGrid, UtensilsCrossed, Sparkles, Hammer } from 'lucide-react';
+import { LayoutGrid, UtensilsCrossed, Sparkles, Hammer, User } from 'lucide-react';
 import { cn, createPageUrl } from '@/utils';
 
 const navItems = [
@@ -10,6 +10,7 @@ const navItems = [
   { name: 'Tables', icon: LayoutGrid, page: '' },
   { name: 'Menu', icon: UtensilsCrossed, page: 'menu' },
   { name: 'Builder', icon: Hammer, page: 'menu-builder' },
+  { name: 'Profile', icon: User, page: 'profile' },
 ];
 
 export default function BottomNav() {
