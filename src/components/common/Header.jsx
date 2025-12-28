@@ -1,7 +1,7 @@
 // File: src/components/common/Header.jsx
 
 import React, { useContext } from 'react';
-import { ChevronLeft } from 'lucide-react';
+import { ChevronLeft, Mail } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { cn } from '@/utils';
@@ -15,7 +15,7 @@ export default function Header({
   rightAction,
   className 
 }) {
-  const { user, profile } = useContext(AppContext);
+  const { user, profile, isAdmin } = useContext(AppContext);
   const displayName =
     profile?.full_name ||
     user?.user_metadata?.full_name ||
@@ -45,6 +45,15 @@ export default function Header({
           </div>
         </div>
         <div className="flex items-center gap-3">
+          {isAdmin ? (
+            <Link
+              to={createPageUrl('admin/inbox')}
+              className="p-2 rounded-full hover:bg-stone-100 dark:hover:bg-[#16213c] transition-colors"
+              aria-label="Admin inbox"
+            >
+              <Mail className="h-5 w-5 text-stone-700 dark:text-[#e7eefc]" />
+            </Link>
+          ) : null}
           {displayName ? (
             <span className="text-sm font-medium text-stone-700 dark:text-[#e7eefc] truncate max-w-[140px]">
               {displayName}
