@@ -12,3 +12,7 @@ where email = '____';
 
 --search user id
 select id from auth.users where email = '____';
+
+
+-- Deploy cmd 
+wrangler pages deploy dist --project-name tablemaster

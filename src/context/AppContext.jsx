@@ -17,8 +17,14 @@ export const AppProvider = ({ children }) => {
   const [editRequest, setEditRequest] = useState(null);
   const [accessLoading, setAccessLoading] = useState(true);
 
-  const normalizedRole = (role || "").toString().toLowerCase();
-  const isAdmin = normalizedRole === "admin";
+  // Resolve role from profile or user metadata immediately (before the async load finishes)
+  const resolvedRole = (
+    profile?.role ||
+    user?.user_metadata?.role ||
+    role ||
+    "user"
+  ).toString().toLowerCase();
+  const isAdmin = resolvedRole === "admin";
   const requiresApproval = !isAdmin;
   // Everyone can perform edits; non-admin changes will be recorded for approval
   const canEdit = true;
