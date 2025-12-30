@@ -43,7 +43,8 @@ export const MenuStorage = {
     const { data: supaData, error } = await supabase
       .from("menu_items")
       .select(`
-        id, category, category_id, name, description, origin, notes, allergens, common_mods, created_at, price,
+        id, category, category_id, name, description, origin, country, weight_oz, cut, aging_days, farm_detail,
+        notes, allergens, common_mods, created_at, price, currency,
         menu_categories:menu_categories!menu_items_category_id_fkey ( id, slug, name, sort_order ),
         menu_prices:menu_prices!menu_prices_item_id_fkey ( price, currency ),
         menu_item_options:menu_item_options!menu_item_options_item_id_fkey (

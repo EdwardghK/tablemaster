@@ -100,7 +100,7 @@ export default function Login() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className="rounded-xl bg-stone-50 dark:bg-stone-700 text-stone-900 dark:text-stone-100"
-                placeholder="Full name"
+                placeholder="Name"
                 autoComplete="name"
               />
             </div>
@@ -112,7 +112,7 @@ export default function Login() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="rounded-xl bg-stone-50 dark:bg-stone-700 text-stone-900 dark:text-stone-100"
-              placeholder="you@example.com"
+              placeholder="Email address"
               autoComplete="email"
             />
           </div>

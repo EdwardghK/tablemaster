@@ -29,6 +29,21 @@ export default function MenuItemCard({
   const [carve, setCarve] = useState(false);
   const STEAK_DONENESS = ['Blue', 'Rare', 'Med-rare', 'Med', 'Med-well', 'Well-done'];
 
+  const formatSteakLabel = (mi) => {
+    const parts = [
+      mi.weight_oz ? `${mi.weight_oz}oz` : '',
+      mi.country || '',
+      mi.name || ''
+    ].filter(Boolean).join(' ').trim();
+    return parts;
+  };
+  const formatFarmLine = (mi) => mi?.origin || mi?.farm_detail || '';
+
+  const formatAging = (mi) => {
+    if (!mi.aging_days || Number(mi.aging_days) <= 0) return '';
+    return `${mi.aging_days} Days Dry-Aged`;
+  };
+
   const matchingAllergens = item.allergens?.filter(a => 
     guestAllergens.includes(a)
   ) || [];
@@ -118,7 +133,9 @@ export default function MenuItemCard({
           )}
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-2">
-              <h3 className="font-semibold text-stone-900 dark:text-stone-100">{item.name}</h3>
+              <h3 className="font-semibold text-stone-900 dark:text-stone-100">
+                {isSteak ? formatSteakLabel(item) : (item.name || '')}
+              </h3>
               <div className="flex items-center gap-2">
               <div className="flex items-center gap-3 justify-start">
                 {isSelected && onEditSelected ? (
@@ -153,9 +170,18 @@ export default function MenuItemCard({
                 </div>
               </div>
             </div>
-            {item.description && (
+            {isSteak ? (
+              <>
+                {formatFarmLine(item) ? (
+                  <p className="text-xs text-stone-500 dark:text-stone-300 mt-1">{formatFarmLine(item)}</p>
+                ) : null}
+                {formatAging(item) ? (
+                  <p className="text-xs text-stone-500 dark:text-stone-300 mt-1">{formatAging(item)}</p>
+                ) : null}
+              </>
+            ) : item.description ? (
               <p className="text-sm text-stone-500 dark:text-stone-300 mt-1 line-clamp-2">{item.description}</p>
-            )}
+            ) : null}
             
             {showAllergenBadges && item.allergens?.length > 0 && (
               <div className="flex flex-wrap gap-1 mt-2">

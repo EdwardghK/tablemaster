@@ -70,6 +70,21 @@ export const ChangeRequests = {
     const { entity_type, entity_id, action, after_data, before_data } = request;
     const reviewer = request.reviewer || null;
 
+    const resolveCategoryId = async (payload) => {
+      if (payload.category_id) return payload.category_id;
+      const rawSlug = (payload.category || payload.category_slug || payload.category_name || "").toString().trim();
+      if (!rawSlug) return null;
+      const slug = rawSlug.toLowerCase().replace(/\s+/g, "_");
+
+      const { data, error } = await supabase
+        .from("menu_categories")
+        .select("id")
+        .ilike("slug", slug)
+        .maybeSingle();
+      if (error) return null;
+      return data?.id || null;
+    };
+
     const apply = async (table, payload) => {
       const id = entity_id || payload?.id;
       if (!id && action !== "create") throw new Error("Missing entity id");
@@ -88,7 +103,66 @@ export const ChangeRequests = {
 
     switch ((entity_type || "").toLowerCase()) {
       case "menu_item": {
-        const payload = after_data || {};
+        const payload = { ...(after_data || {}) };
+
+        if (action !== "delete") {
+          // Ensure category_id is set (NOT NULL in DB). Reuse prior value if missing.
+          if (!payload.category_id) {
+            payload.category_id = before_data?.category_id || (await resolveCategoryId(payload)) || null;
+          }
+          if (!payload.category_id) {
+            throw new Error("category_id is required for menu items");
+          }
+
+          const isSteak =
+            (payload.category || payload.category_slug || "").toLowerCase() === "steaks" ||
+            (before_data?.category || before_data?.category_slug || "").toLowerCase() === "steaks";
+
+          // Normalize steak fields so approvals don't violate NOT NULL / CHECK constraints.
+          const allowedCountries = ["CAD", "US", "AUS", "JAP", "ARG"];
+          const normalizeCountry = (val) => {
+            const normalized = (val || "").toString().trim().toUpperCase();
+            if (!normalized) return null;
+            return allowedCountries.includes(normalized) ? normalized : normalized;
+          };
+
+          const normalizeText = (val) =>
+            (val || "").toString().trim() || null;
+
+          const normalizeNumber = (val) => {
+            if (val === undefined || val === null || val === "") return null;
+            const num = Number(val);
+            return Number.isFinite(num) ? num : null;
+          };
+
+          if (isSteak) {
+            payload.country = normalizeCountry(payload.country ?? before_data?.country ?? null);
+            payload.origin = normalizeText(payload.origin ?? before_data?.origin ?? null);
+
+            const fallbackCut = payload.cut || before_data?.cut || "Unspecified";
+            payload.cut = normalizeText(fallbackCut) || "Unspecified";
+
+            payload.weight_oz = normalizeNumber(payload.weight_oz ?? before_data?.weight_oz ?? null);
+            payload.aging_days = normalizeNumber(payload.aging_days ?? before_data?.aging_days ?? null);
+            payload.dry_aged_notes = normalizeText(payload.dry_aged_notes ?? before_data?.dry_aged_notes ?? null);
+            payload.farm_detail = normalizeText(payload.farm_detail ?? before_data?.farm_detail ?? null);
+          } else {
+            payload.country = null;
+            payload.origin = null;
+            payload.cut = payload.cut ? normalizeText(payload.cut) : null;
+            payload.weight_oz = null;
+            if (Object.prototype.hasOwnProperty.call(payload, "aging_days")) payload.aging_days = null;
+            if (Object.prototype.hasOwnProperty.call(payload, "dry_aged_notes")) payload.dry_aged_notes = null;
+          }
+
+          if (Object.prototype.hasOwnProperty.call(payload, "aging_days") && payload.aging_days === "") {
+            payload.aging_days = null;
+          }
+          if (Object.prototype.hasOwnProperty.call(payload, "farm_detail") && payload.farm_detail === "") {
+            payload.farm_detail = null;
+          }
+        }
+
         await apply("menu_items", payload);
         break;
       }

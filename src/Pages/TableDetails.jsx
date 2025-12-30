@@ -33,6 +33,7 @@ export default function TableDetails() {
   } = useContext(AppContext);
 
   const [table, setTable] = useState(null);
+  const [loadError, setLoadError] = useState('');
   const [guests, setGuests] = useState([]);
   const [menuItems, setMenuItems] = useState(ctxMenuItems || []);
   const [prefixedMenus, setPrefixedMenus] = useState([]);
@@ -42,6 +43,7 @@ export default function TableDetails() {
   const [activeGuestId, setActiveGuestId] = useState(null);
   const [activeTab, setActiveTab] = useState('menu');
   const [activeCategory, setActiveCategory] = useState('all');
+  const [steakOriginFilter, setSteakOriginFilter] = useState('all');
   const [expandedItem, setExpandedItem] = useState(null);
   const [collapsedCourses, setCollapsedCourses] = useState({});
   const [editGuestModal, setEditGuestModal] = useState({ open: false, guest: null });
@@ -54,8 +56,15 @@ export default function TableDetails() {
   useEffect(() => {
     if (!tableId) return;
     (async () => {
-      const t = await TableStorage.getTable(tableId);
-      setTable(t);
+      try {
+        const primary = await TableStorage.getTable(tableId);
+        setTable(primary);
+        setLoadError('');
+      } catch (err) {
+        console.error('Failed to load table:', err);
+        setTable(null);
+        setLoadError('Table not found or you do not have access.');
+      }
     })();
   }, [tableId]);
 
@@ -121,6 +130,12 @@ export default function TableDetails() {
     })();
   }, [tableId]);
 
+  useEffect(() => {
+    if (activeCategory !== 'steaks' && steakOriginFilter !== 'all') {
+      setSteakOriginFilter('all');
+    }
+  }, [activeCategory, steakOriginFilter]);
+
   const activeGuest = guests.find(g => g.id === activeGuestId);
   const guestAllergens = [
     ...(activeGuest?.allergens || []),
@@ -149,7 +164,39 @@ export default function TableDetails() {
     if (activeCategory === 'all') return true;
     if (activeCategory.startsWith('party_')) return false;
     if (item.is_unavailable) return false;
-    return item.category === activeCategory;
+    const catMatch = item.category === activeCategory;
+    if (!catMatch) return false;
+    if (activeCategory === 'steaks' && steakOriginFilter !== 'all') {
+      const originText = (item.origin || '').toLowerCase();
+      const countryText = (item.country || '').toLowerCase();
+      const namePrefix = (item.name || '').split('-')[0].trim().toLowerCase();
+      const key = (steakOriginFilter || '').toLowerCase();
+
+      const tokenMap = {
+        canada: ['cad', 'canada', 'high river', 'winnipeg', 'pei', 'martin farm', 'elora', 'ontario', 'alberta', 'manitoba'],
+        us: ['us', 'usa', 'united states'],
+        australia: ['aus', 'australia', 'queensland', 'victoria'],
+        japan: ['jap', 'japan', 'miyazaki', 'hyogo', 'prefecture'],
+      };
+
+      const containsToken = (text, token) => {
+        if (!text || !token) return false;
+        return token.includes(' ')
+          ? text.includes(token)
+          : text.split(/[\s,]+/).some(part => part === token);
+      };
+
+      const tokens = tokenMap[key] || [key];
+      const matched = tokens.some(token =>
+        countryText === token ||
+        containsToken(originText, token) ||
+        containsToken(namePrefix, token)
+      );
+
+      if (key === 'us' && countryText === 'aus') return false;
+      return matched;
+    }
+    return true;
   }).sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' }));
 
   const findMenuItemForOrderItem = (orderItem) => {
@@ -178,8 +225,14 @@ export default function TableDetails() {
   };
 
   const handleSaveGuest = async (guestData) => {
-    await GuestStorage.updateGuest(guestData.id, guestData);
-    setGuests(await GuestStorage.getGuests(tableId));
+    try {
+      await GuestStorage.updateGuest(guestData.id, guestData);
+      setGuests(await GuestStorage.getGuests(tableId));
+      toast.success('Guest updated');
+    } catch (err) {
+      console.error('update guest failed', err);
+      toast.error(err?.message || 'Could not save guest');
+    }
   };
 
   const handleSaveTable = async (tableData) => {
@@ -249,13 +302,37 @@ export default function TableDetails() {
     toast.success('Item updated');
   };
 
+  const handleDeleteTable = async () => {
+    if (!table?.id) return;
+    const confirmed = window.confirm('Delete this table? This removes it for everyone.');
+    if (!confirmed) return;
+
+    try {
+      await TableStorage.deleteTable(table.id);
+      toast.success('Table deleted');
+      window.history.back();
+      setEditTableModal(false);
+    } catch (err) {
+      console.error('Delete table failed:', err);
+      toast.error(err?.message || 'Could not delete table');
+    }
+  };
+
   if (!table) {
     return (
       <div className="min-h-screen bg-stone-50 pb-24">
         <Skeleton className="h-14 w-full" />
         <div className="p-4 space-y-4">
-          <Skeleton className="h-12 w-full rounded-xl" />
-          <Skeleton className="h-48 w-full rounded-2xl" />
+          {loadError ? (
+            <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl p-3">
+              {loadError}
+            </div>
+          ) : (
+            <>
+              <Skeleton className="h-12 w-full rounded-xl" />
+              <Skeleton className="h-48 w-full rounded-2xl" />
+            </>
+          )}
         </div>
       </div>
     );
@@ -374,6 +451,25 @@ export default function TableDetails() {
                 innerClassName="flex gap-2 overflow-x-auto w-full"
                 buttonClassName="px-3 py-2 rounded-xl capitalize whitespace-nowrap text-stone-900"
               />
+              {activeCategory === 'steaks' && (
+                <div className="mt-2 px-1 flex gap-2 overflow-x-auto">
+                  {['all', 'canada', 'us', 'australia', 'japan'].map((origin) => (
+                    <button
+                      key={origin}
+                      type="button"
+                      onClick={() => setSteakOriginFilter(origin)}
+                      className={cn(
+                        "px-3 py-1.5 rounded-full text-xs font-semibold border",
+                        steakOriginFilter === origin
+                          ? "bg-amber-700 text-white border-amber-700"
+                          : "bg-white text-stone-700 border-stone-200 dark:bg-stone-800 dark:text-stone-200 dark:border-stone-700"
+                      )}
+                    >
+                      {origin === 'us' ? 'US' : origin[0].toUpperCase() + origin.slice(1)}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -427,64 +523,87 @@ export default function TableDetails() {
                   <div key={cat} className="space-y-2">
                     <h3 className="font-semibold text-stone-900 capitalize px-1">{cat}</h3>
                     <div className="space-y-2">
-                      {items.map(item => {
-                        const existing = guestOrderItems.find(i => i.menu_item_id === item.id);
-                        const isSelected = !!existing;
-                        const selectedQuantity = existing?.quantity || 0;
+                      {(() => {
+                        const sortedItems = (cat === 'steaks' && activeCategory === 'steaks')
+                          ? [...items].sort((a, b) => {
+                              const fa = (a.origin || '').toLowerCase();
+                              const fb = (b.origin || '').toLowerCase();
+                              if (fa !== fb) return fa.localeCompare(fb);
+                              return (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' });
+                            })
+                          : items;
 
-                        return (
-                          <MenuItemCard
-                            key={item.id}
-                            item={item}
-                            guestAllergens={guestAllergens}
-                            isSelected={isSelected}
-                            selectedQuantity={selectedQuantity}
-                            selectedOrderItem={existing}
-                            onEditSelected={openEditOrder}
-                            isExpanded={expandedItem === item.id}
-                            onToggleExpand={(id) => setExpandedItem(id)}
-                            onAddToOrder={async (data) => {
-                              if (!activeGuestId) {
-                                toast.error('Select a guest first');
-                                return;
-                              }
-                              try {
-                                const orderItem = await OrderStorage.createOrderItem({
-                                  ...data,
-                                  table_id: tableId,
-                                  guest_id: activeGuestId,
-                                  status: 'pending',
-                                });
-                                setOrderItems(prev => [...prev, orderItem]);
-                                toast.success(`Added ${data.menu_item_name}`);
-                              } catch (err) {
-                                console.error('Add item failed:', err);
-                                toast.error(err?.message || 'Could not add item');
-                              }
-                            }}
-                            onRemoveFromOrder={async (menuItemId) => {
-                              if (!activeGuestId) return;
-                              const itemToRemove = guestOrderItems.find(i => i.menu_item_id === menuItemId);
-                              if (!itemToRemove) return;
-                              await OrderStorage.deleteOrderItem(itemToRemove.id);
-                              setOrderItems(prev => prev.filter(i => i.id !== itemToRemove.id));
-                              toast.success('Removed item');
-                            }}
-                            onUpdateQuantity={async (menuItemId, qty) => {
-                              if (!activeGuestId) return;
-                              const itemToUpdate = guestOrderItems.find(i => i.menu_item_id === menuItemId);
-                              if (!itemToUpdate) return;
-                              if (qty <= 0) {
-                                await OrderStorage.deleteOrderItem(itemToUpdate.id);
-                                setOrderItems(prev => prev.filter(i => i.id !== itemToUpdate.id));
-                              } else {
-                                await OrderStorage.updateOrderItem(itemToUpdate.id, { quantity: qty });
-                                setOrderItems(prev => prev.map(i => i.id === itemToUpdate.id ? { ...i, quantity: qty } : i));
-                              }
-                            }}
-                          />
-                        );
-                      })}
+                        return sortedItems.map((item, idx, arr) => {
+                          const existing = guestOrderItems.find(i => i.menu_item_id === item.id);
+                          const isSelected = !!existing;
+                          const selectedQuantity = existing?.quantity || 0;
+
+                          const farmLabel = (cat === 'steaks' && activeCategory === 'steaks')
+                            ? (item.origin || 'Steaks')
+                            : null;
+                          const prevFarm = idx > 0 ? (arr[idx - 1].origin || 'Steaks') : null;
+                          const showFarmHeader = farmLabel && (idx === 0 || farmLabel !== prevFarm);
+
+                          return (
+                            <React.Fragment key={item.id}>
+                              {showFarmHeader ? (
+                                <div className="mt-2 text-sm font-semibold text-stone-700 uppercase">
+                                  {farmLabel}
+                                </div>
+                              ) : null}
+                              <MenuItemCard
+                                item={item}
+                                guestAllergens={guestAllergens}
+                                isSelected={isSelected}
+                                selectedQuantity={selectedQuantity}
+                                selectedOrderItem={existing}
+                                onEditSelected={openEditOrder}
+                                isExpanded={expandedItem === item.id}
+                                onToggleExpand={(id) => setExpandedItem(id)}
+                                onAddToOrder={async (data) => {
+                                  if (!activeGuestId) {
+                                    toast.error('Select a guest first');
+                                    return;
+                                  }
+                                  try {
+                                    const orderItem = await OrderStorage.createOrderItem({
+                                      ...data,
+                                      table_id: tableId,
+                                      guest_id: activeGuestId,
+                                      status: 'pending',
+                                    });
+                                    setOrderItems(prev => [...prev, orderItem]);
+                                    toast.success(`Added ${data.menu_item_name}`);
+                                  } catch (err) {
+                                    console.error('Add item failed:', err);
+                                    toast.error(err?.message || 'Could not add item');
+                                  }
+                                }}
+                                onRemoveFromOrder={async (menuItemId) => {
+                                  if (!activeGuestId) return;
+                                  const itemToRemove = guestOrderItems.find(i => i.menu_item_id === menuItemId);
+                                  if (!itemToRemove) return;
+                                  await OrderStorage.deleteOrderItem(itemToRemove.id);
+                                  setOrderItems(prev => prev.filter(i => i.id !== itemToRemove.id));
+                                  toast.success('Removed item');
+                                }}
+                                onUpdateQuantity={async (menuItemId, qty) => {
+                                  if (!activeGuestId) return;
+                                  const itemToUpdate = guestOrderItems.find(i => i.menu_item_id === menuItemId);
+                                  if (!itemToUpdate) return;
+                                  if (qty <= 0) {
+                                    await OrderStorage.deleteOrderItem(itemToUpdate.id);
+                                    setOrderItems(prev => prev.filter(i => i.id !== itemToUpdate.id));
+                                  } else {
+                                    await OrderStorage.updateOrderItem(itemToUpdate.id, { quantity: qty });
+                                    setOrderItems(prev => prev.map(i => i.id === itemToUpdate.id ? { ...i, quantity: qty } : i));
+                                  }
+                                }}
+                              />
+                            </React.Fragment>
+                          );
+                        });
+                      })()}
                     </div>
                   </div>
                   ));
@@ -516,10 +635,24 @@ export default function TableDetails() {
                 return (selected.courses || []).map(course => (
                   <div key={course.course} className="border border-stone-200 rounded-xl p-3">
                     {(() => {
+                      const formatCourseItemName = (itemRef) => {
+                        if (!itemRef) return '';
+                        const fullItem = menuItems.find((mi) =>
+                          mi.id === itemRef.id || mi.id === itemRef.menu_item_id
+                        );
+                        const baseName = itemRef.name || itemRef.menu_item_name || fullItem?.name || '';
+                        const weight = fullItem?.weight_oz ?? itemRef.weight_oz;
+                        const country = fullItem?.country ?? itemRef.country;
+                        const prefix = [
+                          weight ? `${weight}oz` : '',
+                          country || '',
+                        ].filter(Boolean).join(' ');
+                        return prefix ? `${prefix} ${baseName}` : baseName;
+                      };
                       const existingCourse = guestOrderItems.find(i => i.course === course.course);
                       const isCollapsed = collapsedCourses[activeGuestId]?.[course.course] ?? false;
-                      const selectedLabel = existingCourse?.menu_item_name
-                        ? ` — ${existingCourse.menu_item_name}`
+                      const selectedLabel = existingCourse
+                        ? ` — ${formatCourseItemName(existingCourse)}`
                         : "";
                       return (
                         <>
@@ -552,9 +685,10 @@ export default function TableDetails() {
                                 const existingForCourse = guestOrderItems.find(i => i.course === course.course);
                                 const isSelected = existingForCourse?.menu_item_id === item.id;
                                 const selectedQuantity = isSelected ? (existingForCourse?.quantity || 0) : 0;
+                                const displayName = formatCourseItemName(item);
                                 const syntheticItem = {
                                   id: item.id,
-                                  name: item.name,
+                                  name: displayName || item.name,
                                   category: fullItem?.category || fullItem?.category_slug || item.category || (course.course.toLowerCase().includes('steak') ? 'steaks' : course.course),
                                   price: 0,
                                   description: '',
@@ -744,6 +878,7 @@ export default function TableDetails() {
           handleSaveTable(tableData);
           setEditTableModal(false);
         }}
+        onDelete={handleDeleteTable}
       />
 
       <Dialog

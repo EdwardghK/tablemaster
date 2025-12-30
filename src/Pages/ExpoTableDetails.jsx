@@ -82,6 +82,20 @@ export default function ExpoTableDetails() {
     }))
     .filter((g) => g.allergens.length > 0);
 
+  const formatSteakLabel = (item) => {
+    const weight = item.weight_oz ?? item.weightOz ?? item.weight;
+    const country = item.country || item.country_code || item.countryCode;
+    const baseName = item.menu_item_name || item.name || "Item";
+    const prefix = [weight ? `${weight}oz` : null, country].filter(Boolean).join(" ");
+    return prefix ? `${prefix} ${baseName}` : baseName;
+  };
+
+  const displayItemName = (item) => {
+    const category = (item.category || item.category_slug || "").toLowerCase();
+    if (category === "steaks") return formatSteakLabel(item);
+    return item.menu_item_name || item.name;
+  };
+
   const guestAllergenList = (guestId) => {
     const g = guestMap.get(guestId);
     if (!g) return [];
@@ -126,9 +140,15 @@ export default function ExpoTableDetails() {
                         : "bg-stone-50 border-stone-100 text-stone-900"
                     )}
                   >
-                    <div className="flex items-center justify-between">
-                      <div className="font-semibold">
-                        {seatLabel(item.guest_id)} — {item.menu_item_name || item.name}
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 font-semibold">
+                        <span>{seatLabel(item.guest_id)}</span>
+                        {allergies.length > 0 && (
+                          <span className="text-[11px] font-semibold text-red-800 bg-red-100 px-2 py-0.5 rounded-full">
+                            Allergy: {allergies.join(", ")}
+                          </span>
+                        )}
+                        <span className="text-stone-900">- {displayItemName(item)}</span>
                       </div>
                       {item.quantity && item.quantity > 1 && (
                         <span className="text-sm font-medium text-stone-600">
@@ -173,3 +193,5 @@ export default function ExpoTableDetails() {
     </div>
   );
 }
+
+

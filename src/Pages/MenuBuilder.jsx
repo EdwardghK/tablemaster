@@ -45,9 +45,13 @@ export default function MenuBuilder() {
     .sort((a, b) => a.localeCompare(b));
 
   const filteredMenuItems = menuItems.filter((item) => {
-    const matchesSearch = (item.name || "")
-      .toLowerCase()
-      .includes(search.toLowerCase());
+    const searchLower = (search || "").toLowerCase().trim();
+    const matchesSearch =
+      searchLower === "" ||
+      (item.name || "").toLowerCase().includes(searchLower) ||
+      (item.weight_oz !== null &&
+        item.weight_oz !== undefined &&
+        `${item.weight_oz}`.toLowerCase().includes(searchLower));
     const cat =
       item.category || item.category_slug || item.menu_categories?.slug || "other";
     const matchesCategory = categoryFilter === "all" || cat === categoryFilter;
@@ -55,6 +59,34 @@ export default function MenuBuilder() {
   }).sort((a, b) =>
     (a.name || "").localeCompare(b.name || "", undefined, { sensitivity: "base" })
   );
+  const formatSteakLabel = (mi) => {
+    const parts = [
+      mi.weight_oz ? `${mi.weight_oz}oz` : "",
+      mi.country || "",
+      mi.name || "",
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .trim();
+    return parts || mi.name || "";
+  };
+  const formatFarmLine = (mi) => mi?.origin || mi?.farm_detail || "";
+  const formatAging = (mi) => {
+    if (!mi?.aging_days || Number(mi.aging_days) <= 0) return "";
+    return `${mi.aging_days} Days Dry-Aged`;
+  };
+  const formatDisplay = (mi) => {
+    const cat =
+      mi.category || mi.category_slug || mi.menu_categories?.slug || "";
+    const isSteak = cat === "steaks";
+    const title = isSteak ? formatSteakLabel(mi) : mi.name || "";
+    return {
+      title: title || mi.name || "Menu item",
+      farmLine: isSteak ? formatFarmLine(mi) : "",
+      agingLine: isSteak ? formatAging(mi) : "",
+      description: !isSteak ? mi.description || "" : "",
+    };
+  };
 
   useEffect(() => {
     loadMenu();
@@ -220,6 +252,7 @@ export default function MenuBuilder() {
   };
 
   const selectedMenu = menus.find((m) => m.id === selectedMenuId) || null;
+  const menuItemMap = new Map(menuItems.map((i) => [i.id, i]));
 
   return (
     <div className="min-h-screen bg-stone-50 pb-24">
@@ -372,10 +405,11 @@ export default function MenuBuilder() {
                     <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
                       {filteredMenuItems.map((item) => {
                         const checked = (courseSelections[course] || []).includes(item.id);
+                        const display = formatDisplay(item);
                         return (
                           <label
                             key={`${course}-${item.id}`}
-                            className="flex items-center gap-2 text-sm text-stone-700 cursor-pointer hover:bg-white rounded-lg px-2 py-1 transition-colors"
+                            className="flex items-start gap-2 text-sm text-stone-700 cursor-pointer hover:bg-white rounded-lg px-2 py-1 transition-colors"
                           >
                             <Checkbox
                               checked={checked}
@@ -383,7 +417,24 @@ export default function MenuBuilder() {
                                 toggleCourseItem(course, item.id);
                               }}
                             />
-                            <span className="flex-1 truncate">{item.name}</span>
+                            <span className="flex-1 min-w-0">
+                              <div className="font-medium truncate">{display.title}</div>
+                              {display.farmLine ? (
+                                <div className="text-xs text-stone-500 truncate">
+                                  {display.farmLine}
+                                </div>
+                              ) : null}
+                              {display.agingLine ? (
+                                <div className="text-xs text-stone-500 truncate">
+                                  {display.agingLine}
+                                </div>
+                              ) : null}
+                              {!display.farmLine && !display.agingLine && display.description ? (
+                                <div className="text-xs text-stone-500 truncate">
+                                  {display.description}
+                                </div>
+                              ) : null}
+                            </span>
                           </label>
                         );
                       })}
@@ -430,9 +481,24 @@ export default function MenuBuilder() {
                     <p className="text-xs text-stone-500">No items selected.</p>
                   ) : (
                     <ul className="mt-1 text-sm text-stone-700 list-disc list-inside space-y-1">
-                      {items.map((it) => (
-                        <li key={it.id}>{it.name}</li>
-                      ))}
+                      {items.map((it) => {
+                        const full = menuItemMap.get(it.id) || it;
+                        const display = formatDisplay(full);
+                        return (
+                          <li key={it.id} className="space-y-0.5">
+                            <div className="font-medium">{display.title}</div>
+                            {display.farmLine ? (
+                              <div className="text-xs text-stone-500">{display.farmLine}</div>
+                            ) : null}
+                            {display.agingLine ? (
+                              <div className="text-xs text-stone-500">{display.agingLine}</div>
+                            ) : null}
+                            {!display.farmLine && !display.agingLine && display.description ? (
+                              <div className="text-xs text-stone-500">{display.description}</div>
+                            ) : null}
+                          </li>
+                        );
+                      })}
                     </ul>
                   )}
                 </div>

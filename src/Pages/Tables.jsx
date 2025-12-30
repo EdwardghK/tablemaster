@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect } from 'react';
 import Header from '@/components/common/Header';
 import BottomNav from '@/components/common/BottomNav';
 import TableCard from '@/components/common/tables/TableCard.jsx';
@@ -10,15 +10,10 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { TableStorage } from '@/api/localStorageHelpers/tables';
 import { GuestStorage } from '@/api/localStorageHelpers/guests';
 import { OrderStorage } from '@/api/localStorageHelpers/orders';
-import { AppContext } from '@/context/AppContext';
-import { toast } from 'sonner';
-import { ChangeRequests } from '@/api/changeRequests';
 
 export default function Tables() {
   const [searchQuery, setSearchQuery] = useState('');
   const [editModal, setEditModal] = useState({ open: false, table: null });
-  const { requiresApproval, user } = useContext(AppContext);
-
   const [tables, setTables] = useState([]);
   const [guests, setGuests] = useState([]);
   const [orderItems, setOrderItems] = useState([]);
@@ -98,22 +93,10 @@ export default function Tables() {
   const handleDeleteTable = async (table) => {
     const confirmed = window.confirm(`Delete table ${table.table_number || ''}?`);
     if (!confirmed) return;
-    if (requiresApproval) {
-      await ChangeRequests.submit({
-        user,
-        entityType: 'table',
-        entityId: table.id,
-        action: 'delete',
-        beforeData: table,
-        afterData: null,
-      });
-      toast.success('Deletion submitted for approval. Table will be removed after admin review.');
-    } else {
-      await TableStorage.deleteTable(table.id);
-      setGuests((prev) => prev.filter((g) => g.table_id !== table.id));
-      setOrderItems((prev) => prev.filter((o) => o.table_id !== table.id));
-      setTables(await TableStorage.getAllTables());
-    }
+    await TableStorage.deleteTable(table.id);
+    setGuests((prev) => prev.filter((g) => g.table_id !== table.id));
+    setOrderItems((prev) => prev.filter((o) => o.table_id !== table.id));
+    setTables(await TableStorage.getAllTables());
   };
 
   return (

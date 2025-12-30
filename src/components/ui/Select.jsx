@@ -12,7 +12,7 @@ export function Select({ value, onValueChange, children, className }) {
         className
       )}
     >
-      {React.Children.toArray(children).filter((child) => child?.type === 'option')}
+      {children}
     </select>
   );
 }

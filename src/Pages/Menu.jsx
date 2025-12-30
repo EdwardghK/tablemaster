@@ -6,6 +6,7 @@ import { AppContext } from "@/context/AppContext.jsx";
 import { Button } from "@/components/ui/Button";
 import { Plus, Trash2, Pencil } from "lucide-react";
 import AllergenBadge, { COMMON_ALLERGENS } from "@/components/common/AllergenBadge";
+import CategoryTabs from "@/components/menu/CategoryTabs";
 import { ChangeRequests } from "@/api/changeRequests";
 import {
   Dialog,
@@ -39,6 +40,29 @@ const CATEGORIES = [
   "sides",
   "additions",
   "sauces",
+  "desserts",
+];
+
+const STEAK_COUNTRIES = ["CAD", "AUS", "US", "ARG", "JAP"];
+const STEAK_ORIGINS = [
+  "High River, AB",
+  "Winnipeg, MB",
+  "PEI",
+  "Martin Farm, Elora, ON",
+  "Pinnacle Farms, Queensland",
+  "Black Opal, Victoria",
+  "Miyazaki Prefecture, JAP",
+  "Hyogo Prefecture, JAP",
+];
+const STEAK_CUTS = [
+  "Tenderloin",
+  "Striploin",
+  "Ribeye",
+  "T-Bone",
+  "Porter House",
+  "Tomahawk",
+  "Flat iron",
+  "Texudo",
 ];
 
 // ----------------- Main Component -----------------
@@ -56,13 +80,36 @@ export default function MenuPage() {
   const [itemModal, setItemModal] = useState({ open: false, item: null });
   const [detailModal, setDetailModal] = useState({ open: false, item: null });
   const [unavailableMap, setUnavailableMap] = useState({});
+  const [steakOriginFilter, setSteakOriginFilter] = useState("all");
+  const formatSteakLabel = (mi) => {
+    const parts = [
+      mi.weight_oz ? `${mi.weight_oz}oz` : "",
+      mi.country || "",
+      mi.name || "",
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .trim();
+    return parts;
+  };
+  const formatFarmLine = (mi) => mi?.origin || mi?.farm_detail || "";
+  const formatAging = (mi) => {
+    if (!mi?.aging_days || Number(mi.aging_days) <= 0) return "";
+    return `${mi.aging_days} Days Dry-Aged`;
+  };
   const [form, setForm] = useState({
     name: "",
     price: "",
-    category: "",
+    category: CATEGORIES[0],
     description: "",
     allergens: "",
     mods: "",
+    country: "",
+    origin: "",
+    weight_oz: "",
+    cut: "",
+    aging_days: "",
+    farm_detail: "",
   });
 
   // ----------------- Load Menu Items -----------------
@@ -96,6 +143,27 @@ export default function MenuPage() {
       toast.error("Please select a category");
       return;
     }
+    if (form.category === "steaks" && !form.country) {
+      toast.error("Country is required for steaks");
+      return;
+    }
+    if (form.category === "steaks" && !form.origin?.trim()) {
+      toast.error("Origin is required for steaks");
+      return;
+    }
+    if (form.category === "steaks" && !form.cut?.trim()) {
+      toast.error("Cut is required for steaks");
+      return;
+    }
+    if (
+      form.category === "steaks" &&
+      (form.weight_oz === "" || Number(form.weight_oz) <= 0)
+    ) {
+      toast.error("Weight (oz) is required for steaks");
+      return;
+    }
+
+    const isSteak = form.category === "steaks";
 
     const payload = {
       name: form.name.trim(),
@@ -104,9 +172,17 @@ export default function MenuPage() {
       description: form.description,
       allergens: parseAllergens(form.allergens),
       common_mods: parseMods(form.mods),
+      country: isSteak ? (form.country || "").trim() : null,
+      origin: isSteak ? (form.origin || "").trim() : null,
+      weight_oz:
+        isSteak && form.weight_oz !== "" ? Number(form.weight_oz) : null,
+      cut: isSteak ? (form.cut || "").trim() : null,
+      aging_days:
+        isSteak && form.aging_days !== "" ? Number(form.aging_days) : null,
+      farm_detail: (form.farm_detail || "").trim() || null,
     };
     if (!payload.allergens.length) {
-      payload.allergens = ["None"];
+      payload.allergens = [];
     }
 
     const saveDirect = async () => {
@@ -186,9 +262,22 @@ export default function MenuPage() {
 
   // ----------------- Modals -----------------
   const openAddModal = () => {
-    // Preselect the current category filter (if not "all") to avoid the button being disabled
-    const initialCategory = categoryFilter !== "all" ? categoryFilter : "";
-    setForm({ name: "", price: "", category: initialCategory, description: "", allergens: "", mods: "" });
+    // Preselect the current category filter (if not "all"); otherwise default to first category
+    const initialCategory = categoryFilter !== "all" ? categoryFilter : CATEGORIES[0];
+    setForm({
+      name: "",
+      price: "",
+      category: initialCategory,
+      description: "",
+      allergens: "",
+      mods: "",
+      country: "",
+      origin: "",
+      weight_oz: "",
+    cut: "",
+    aging_days: "",
+    farm_detail: "",
+  });
     setItemModal({ open: true, item: null });
   };
 
@@ -200,14 +289,33 @@ export default function MenuPage() {
       description: item.description || "",
       allergens: Array.isArray(item.allergens) ? item.allergens.join(", ") : "",
       mods: Array.isArray(item.common_mods) ? item.common_mods.join(", ") : "",
-    });
+      country: item.country || "",
+      origin: item.origin || "",
+      weight_oz: item.weight_oz ?? "",
+    cut: item.cut || "",
+    aging_days: item.aging_days ?? "",
+    farm_detail: item.farm_detail || "",
+  });
     setItemModal({ open: true, item });
     setDetailModal({ open: false, item: null });
   };
 
   const closeModal = () => {
     setItemModal({ open: false, item: null });
-    setForm({ name: "", price: "", category: "", description: "", allergens: "", mods: "" });
+    setForm({
+      name: "",
+      price: "",
+      category: CATEGORIES[0],
+      description: "",
+      allergens: "",
+      mods: "",
+      country: "",
+    origin: "",
+    weight_oz: "",
+    cut: "",
+    aging_days: "",
+    farm_detail: "",
+  });
   };
 
   // ----------------- Filtering -----------------
@@ -233,7 +341,46 @@ export default function MenuPage() {
 
   const filteredItems = safeMenuItems.filter((item) => {
     const cat = normalizeCategory(item);
-    return categoryFilter === "all" || cat === categoryFilter;
+    if (categoryFilter !== "all" && cat !== categoryFilter) return false;
+    if (cat === "steaks" && steakOriginFilter !== "all") {
+      const originText = (item.origin || "").toLowerCase();
+      const country = (item.country || "").toLowerCase();
+      const namePrefix = (item.name || "").split("-")[0].trim().toLowerCase();
+      const key = steakOriginFilter.toLowerCase();
+      const matchTokens = {
+        canada: ["cad", "canada"],
+        us: ["us", "usa", "united states"],
+        australia: ["aus", "australia"],
+        japan: ["jap", "japan"],
+      };
+      const tokens = matchTokens[key] || [key];
+      if (key === "canada") {
+        tokens.push(
+          "high river",
+          "winnipeg",
+          "pei",
+          "martin farm",
+          "elora",
+          "ontario",
+          "alberta",
+          "manitoba"
+        );
+      }
+      const containsToken = (text, token) => {
+        if (!text) return false;
+        if (token.includes(" ")) return text.includes(token);
+        return text.split(/[^a-z0-9]+/).some((part) => part === token);
+      };
+      const matched = tokens.some(
+        (t) =>
+          country === t ||
+          containsToken(originText, t) ||
+          containsToken(namePrefix, t)
+      );
+      if (key === "us" && country === "aus") return false;
+      return matched;
+    }
+    return true;
   });
 
   const sortedItems = [...filteredItems].sort((a, b) =>
@@ -252,6 +399,12 @@ export default function MenuPage() {
     setPrefixedMenu(null);
   };
 
+  useEffect(() => {
+    if (categoryFilter !== "steaks" && steakOriginFilter !== "all") {
+      setSteakOriginFilter("all");
+    }
+  }, [categoryFilter, steakOriginFilter]);
+
   // ----------------- Render -----------------
   return (
     <div className="min-h-screen bg-stone-50 pb-24 dark:bg-stone-900">
@@ -259,11 +412,11 @@ export default function MenuPage() {
         title="Menu Management"
         subtitle={`${menuItems.length} items`}
         rightAction={
-          <div className="flex items-center gap-2">
-            <Button
-              onClick={openAddModal}
-              type="button"
-              size="sm"
+      <div className="flex items-center gap-2">
+        <Button
+          onClick={openAddModal}
+          type="button"
+          size="sm"
               className="bg-amber-700 hover:bg-amber-800 rounded-xl"
             >
               <Plus className="h-4 w-4 mr-1" /> Add Item
@@ -274,33 +427,32 @@ export default function MenuPage() {
 
       {/* Category Filter */}
       <div className="sticky top-14 z-30 px-4 py-3 bg-stone-50 dark:bg-stone-900 border-b border-stone-100 dark:border-stone-800">
-        <div className="flex gap-2 overflow-x-auto">
-          <button
-            onClick={() => setCategoryFilter("all")}
-            className={cn(
-              "px-3 py-2 rounded-xl text-stone-900",
-              categoryFilter === "all"
-                ? "bg-amber-700 text-white"
-                : "bg-stone-100"
-            )}
-          >
-            All
-          </button>
-          {CATEGORIES.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setCategoryFilter(cat)}
-              className={cn(
-                "px-3 py-2 rounded-xl capitalize text-stone-900",
-                categoryFilter === cat
-                  ? "bg-amber-700 text-white"
-                  : "bg-stone-100"
-              )}
-            >
-              {cat}
-            </button>
-          ))}
-        </div>
+        <CategoryTabs
+          activeCategory={categoryFilter}
+          onCategoryChange={setCategoryFilter}
+          containerClassName="px-0 py-0"
+          innerClassName="flex gap-2 overflow-x-auto w-full"
+          buttonClassName="capitalize"
+        />
+        {categoryFilter === "steaks" && (
+          <div className="mt-2 px-1 flex gap-2 overflow-x-auto">
+            {["all", "canada", "us", "australia", "japan"].map((origin) => (
+              <button
+                key={origin}
+                type="button"
+                onClick={() => setSteakOriginFilter(origin)}
+                className={cn(
+                  "px-3 py-1.5 rounded-full text-xs font-semibold border",
+                  steakOriginFilter === origin
+                    ? "bg-amber-700 text-white border-amber-700"
+                    : "bg-white text-stone-700 border-stone-200 dark:bg-stone-800 dark:text-stone-200 dark:border-stone-700"
+                )}
+              >
+                {origin === "us" ? "US" : origin[0].toUpperCase() + origin.slice(1)}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Items List */}
@@ -311,79 +463,192 @@ export default function MenuPage() {
           </p>
         )}
 
-        {Object.entries(groupedItems).map(([cat, items]) => (
-          <div key={cat}>
-            <h3 className="font-semibold mb-2 capitalize text-stone-900">{cat}</h3>
-            <div className="space-y-2">
-              {items.map((item) => (
-                <div
-                  key={item.id}
-                  className="p-3 bg-white dark:bg-stone-800 rounded-xl flex justify-between items-center shadow-sm cursor-pointer hover:shadow-md transition"
-                  onClick={() => setDetailModal({ open: true, item })}
-                >
-                  <div>
-                    <p className="font-medium text-stone-900">{item.name}</p>
-                    <p className="text-xs text-stone-500">
-                      {item.description}
-                    </p>
-                    {item.allergens?.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {item.allergens.map((a) => (
-                          <AllergenBadge key={a} allergen={a} size="sm" />
-                        ))}
+          {Object.entries(groupedItems).map(([cat, items]) => (
+            <div key={cat}>
+              <h3 className="font-semibold mb-2 capitalize text-stone-900">{cat}</h3>
+              <div className="space-y-2">
+                {cat === "steaks"
+                  ? (() => {
+                      const farmGroups = items.reduce((acc, it) => {
+                        const key =
+                          it.origin?.trim() ||
+                          it.farm_detail?.trim() ||
+                          "Steaks";
+                        acc[key] = acc[key] || [];
+                        acc[key].push(it);
+                        return acc;
+                      }, {});
+                      return Object.entries(farmGroups).map(([farm, group]) => (
+                        <div key={farm} className="space-y-2">
+                          <div className="text-base font-bold uppercase text-stone-700">
+                            {farm}
+                          </div>
+                          {group.map((item) => (
+                            <div
+                              key={item.id}
+                              className="p-3 bg-white dark:bg-stone-800 rounded-xl flex justify-between items-center shadow-sm cursor-pointer hover:shadow-md transition"
+                              onClick={() => setDetailModal({ open: true, item })}
+                            >
+                              <div>
+                                <p className="font-medium text-stone-900">
+                                  {formatSteakLabel(item)}
+                                </p>
+                                {formatFarmLine(item) ? (
+                                  <p className="text-xs text-stone-500">
+                                    {formatFarmLine(item)}
+                                  </p>
+                                ) : null}
+                                {formatAging(item) ? (
+                                  <p className="text-xs text-stone-500">
+                                    {formatAging(item)}
+                                  </p>
+                                ) : null}
+                                {item.allergens?.length > 0 && (
+                                  <div className="flex flex-wrap gap-1 mt-1">
+                                    {item.allergens.map((a) => (
+                                      <AllergenBadge key={a} allergen={a} size="sm" />
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                              <div className="flex flex-col items-end gap-2">
+                                <span className="font-bold text-amber-700 text-base">
+                                  ${Number(item.price || 0).toFixed(2)}
+                                </span>
+                                <label
+                                  className="flex items-center gap-2 text-xs text-stone-600"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <Checkbox
+                                    checked={!!item.is_unavailable}
+                                    onCheckedChange={async (checked) => {
+                                      try {
+                                        if (requiresApproval) {
+                                          await ChangeRequests.submit({
+                                            user,
+                                            entityType: 'menu_item',
+                                            entityId: item.id,
+                                            action: 'availability',
+                                            beforeData: { ...item, is_unavailable: item.is_unavailable },
+                                            afterData: { ...item, is_unavailable: !!checked },
+                                          });
+                                          toast.success("Availability change submitted for approval.");
+                                          return;
+                                        }
+                                        const next = MenuStorage.setUnavailable(item.id, checked);
+                                        setUnavailableMap(next);
+                                        setMenuItems((prev) =>
+                                          (prev || []).map((i) =>
+                                            i.id === item.id ? { ...i, is_unavailable: !!checked } : i
+                                          )
+                                        );
+                                        setCtxMenuItems?.((prev) =>
+                                          (prev || []).map((i) =>
+                                            i.id === item.id ? { ...i, is_unavailable: !!checked } : i
+                                          )
+                                        );
+                                      } catch (err) {
+                                        console.error('Toggle availability failed:', err);
+                                        toast.error(err?.message || 'Could not change availability');
+                                      }
+                                    }}
+                                  />
+                                  <span>{item.is_unavailable ? "Unavailable" : "Available"}</span>
+                                </label>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ));
+                    })()
+                  : items.map((item) => (
+                      <div
+                        key={item.id}
+                        className="p-3 bg-white dark:bg-stone-800 rounded-xl flex justify-between items-center shadow-sm cursor-pointer hover:shadow-md transition"
+                        onClick={() => setDetailModal({ open: true, item })}
+                      >
+                        <div>
+                          <p className="font-medium text-stone-900">
+                            {item.category === "steaks"
+                              ? formatSteakLabel(item)
+                              : item.name}
+                          </p>
+                          {item.category === "steaks" ? (
+                            <>
+                              {formatFarmLine(item) ? (
+                                <p className="text-xs text-stone-500">
+                                  {formatFarmLine(item)}
+                                </p>
+                              ) : null}
+                              {formatAging(item) ? (
+                                <p className="text-xs text-stone-500">
+                                  {formatAging(item)}
+                                </p>
+                              ) : null}
+                            </>
+                          ) : (
+                            <p className="text-xs text-stone-500">
+                              {item.description}
+                            </p>
+                          )}
+                          {item.allergens?.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {item.allergens.map((a) => (
+                                <AllergenBadge key={a} allergen={a} size="sm" />
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex flex-col items-end gap-2">
+                          <span className="font-bold text-amber-700 text-base">
+                            ${Number(item.price || 0).toFixed(2)}
+                          </span>
+                          <label
+                            className="flex items-center gap-2 text-xs text-stone-600"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <Checkbox
+                              checked={!!item.is_unavailable}
+                              onCheckedChange={async (checked) => {
+                                try {
+                                  if (requiresApproval) {
+                                    await ChangeRequests.submit({
+                                      user,
+                                      entityType: 'menu_item',
+                                      entityId: item.id,
+                                      action: 'availability',
+                                      beforeData: { ...item, is_unavailable: item.is_unavailable },
+                                      afterData: { ...item, is_unavailable: !!checked },
+                                    });
+                                    toast.success("Availability change submitted for approval.");
+                                    return;
+                                  }
+                                  const next = MenuStorage.setUnavailable(item.id, checked);
+                                  setUnavailableMap(next);
+                                  setMenuItems((prev) =>
+                                    (prev || []).map((i) =>
+                                      i.id === item.id ? { ...i, is_unavailable: !!checked } : i
+                                    )
+                                  );
+                                  setCtxMenuItems?.((prev) =>
+                                    (prev || []).map((i) =>
+                                      i.id === item.id ? { ...i, is_unavailable: !!checked } : i
+                                    )
+                                  );
+                                } catch (err) {
+                                  console.error('Toggle availability failed:', err);
+                                  toast.error(err?.message || 'Could not change availability');
+                                }
+                              }}
+                            />
+                            <span>{item.is_unavailable ? "Unavailable" : "Available"}</span>
+                          </label>
+                        </div>
                       </div>
-                    )}
-                  </div>
-                  <div className="flex flex-col items-end gap-2">
-                    <span className="font-bold text-amber-700 text-base">
-                      ${Number(item.price || 0).toFixed(2)}
-                    </span>
-                    <label
-                      className="flex items-center gap-2 text-xs text-stone-600"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <Checkbox
-                        checked={!!item.is_unavailable}
-                        onCheckedChange={async (checked) => {
-                          try {
-                            if (requiresApproval) {
-                              await ChangeRequests.submit({
-                                user,
-                                entityType: 'menu_item',
-                                entityId: item.id,
-                                action: 'availability',
-                                beforeData: { ...item, is_unavailable: item.is_unavailable },
-                                afterData: { ...item, is_unavailable: !!checked },
-                              });
-                              toast.success("Availability change submitted for approval.");
-                              return;
-                            }
-                            const next = MenuStorage.setUnavailable(item.id, checked);
-                            setUnavailableMap(next);
-                            setMenuItems((prev) =>
-                              (prev || []).map((i) =>
-                                i.id === item.id ? { ...i, is_unavailable: !!checked } : i
-                              )
-                            );
-                            setCtxMenuItems?.((prev) =>
-                              (prev || []).map((i) =>
-                                i.id === item.id ? { ...i, is_unavailable: !!checked } : i
-                              )
-                            );
-                          } catch (err) {
-                            console.error('Toggle availability failed:', err);
-                            toast.error(err?.message || 'Could not change availability');
-                          }
-                        }}
-                      />
-                      <span>{item.is_unavailable ? "Unavailable" : "Available"}</span>
-                    </label>
-                  </div>
-                </div>
-              ))}
+                    ))}
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
       </div>
 
       {/* Modal */}
@@ -441,6 +706,118 @@ export default function MenuPage() {
                 </Select>
               </div>
             </div>
+
+            {form.category === "steaks" && (
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label>Country</Label>
+                  <select
+                    value={form.country}
+                    onChange={(e) =>
+                      setForm({ ...form, country: e.target.value })
+                    }
+                    className="w-full rounded-xl border border-stone-200 px-3 py-2 bg-white text-stone-900"
+                  >
+                    <option value="">Select country</option>
+                    {STEAK_COUNTRIES.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                  <Input
+                    value={form.country}
+                    onChange={(e) =>
+                      setForm({ ...form, country: e.target.value })
+                    }
+                    placeholder="Or type a country"
+                    className="mt-1 rounded-xl bg-stone-50"
+                  />
+                </div>
+                <div>
+                  <Label>Origin</Label>
+                  <select
+                    value={form.origin}
+                    onChange={(e) =>
+                      setForm({ ...form, origin: e.target.value })
+                    }
+                    className="w-full rounded-xl border border-stone-200 px-3 py-2 bg-white text-stone-900"
+                  >
+                    <option value="">Select origin</option>
+                    {STEAK_ORIGINS.map((o) => (
+                      <option key={o} value={o}>
+                        {o}
+                      </option>
+                    ))}
+                  </select>
+                  <Input
+                    value={form.origin}
+                    onChange={(e) =>
+                      setForm({ ...form, origin: e.target.value })
+                    }
+                    placeholder="Or type a specific origin"
+                    className="mt-1 rounded-xl bg-stone-50"
+                  />
+                </div>
+                <div>
+                  <Label>Weight (oz)</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.1"
+                    value={form.weight_oz}
+                    onChange={(e) =>
+                      setForm({ ...form, weight_oz: e.target.value })
+                    }
+                    className="rounded-xl"
+                  />
+                </div>
+                <div>
+                  <Label>Cut</Label>
+                  <select
+                    value={form.cut}
+                    onChange={(e) => setForm({ ...form, cut: e.target.value })}
+                    className="w-full rounded-xl border border-stone-200 px-3 py-2 bg-white text-stone-900"
+                  >
+                    <option value="">Select cut</option>
+                    {STEAK_CUTS.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                  <Input
+                    value={form.cut}
+                    onChange={(e) => setForm({ ...form, cut: e.target.value })}
+                    placeholder="Or type a specific cut"
+                    className="mt-1 rounded-xl bg-stone-50"
+                  />
+                </div>
+                <div>
+                  <Label>Dry-aged days (optional)</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    value={form.aging_days}
+                    onChange={(e) =>
+                      setForm({ ...form, aging_days: e.target.value })
+                    }
+                    className="rounded-xl"
+                  />
+                </div>
+                <div className="col-span-2">
+                  <Label>Farm / Program detail (optional)</Label>
+                  <Input
+                    value={form.farm_detail}
+                    onChange={(e) =>
+                      setForm({ ...form, farm_detail: e.target.value })
+                    }
+                    placeholder="e.g., Pinnacle Farms, Queensland"
+                    className="rounded-xl"
+                  />
+                </div>
+              </div>
+            )}
 
             <div>
               <Label>Description</Label>

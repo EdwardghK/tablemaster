@@ -12,18 +12,18 @@ const DEFAULT_CATEGORIES = [
   { value: 'sides', label: 'Sides' },
   { value: 'additions', label: 'Additions' },
   { value: 'sauces', label: 'Sauces' },
+  { value: 'desserts', label: 'Desserts' },
 ];
 
 export default function CategoryTabs({
   activeCategory = 'all',
   onCategoryChange = () => {},
   partyMenus = [],
+  categories = DEFAULT_CATEGORIES,
   containerClassName = '',
   innerClassName = '',
   buttonClassName = '',
 }) {
-  const categories = DEFAULT_CATEGORIES;
-
   return (
     <div className={cn("px-4 py-3", containerClassName)}>
       <div className={cn("flex gap-2 overflow-x-auto", innerClassName)}>
@@ -32,8 +32,10 @@ export default function CategoryTabs({
             key={cat.value}
             onClick={() => onCategoryChange(cat.value)}
             className={cn(
-              "px-3 py-2 rounded-xl whitespace-nowrap",
-              activeCategory === cat.value ? "bg-amber-700 text-white" : "bg-stone-100 text-stone-900",
+              "px-3 py-2 rounded-xl whitespace-nowrap text-sm font-semibold transition-colors",
+              activeCategory === cat.value
+                ? "bg-amber-700 text-white shadow-sm"
+                : "bg-stone-100 text-stone-900 hover:bg-stone-200 dark:bg-stone-800 dark:text-stone-100 dark:hover:bg-stone-700",
               buttonClassName
             )}
           >

@@ -83,7 +83,6 @@ export const GuestStorage = {
       .from("guests")
       .update({ ...data, owner_id: user.id })
       .eq("id", id)
-      .eq("owner_id", user.id)
       .select()
       .single();
     if (error) throw error;

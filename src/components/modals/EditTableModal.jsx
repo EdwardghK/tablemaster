@@ -10,7 +10,7 @@ const TABLE_COLORS = [
   '#D97706', '#DC2626', '#16A34A', '#2563EB', '#7C3AED', '#DB2777', '#0891B2', '#65A30D'
 ];
 
-export default function EditTableModal({ open, onClose, table, sections, onSave, onCreateGuests }) {
+export default function EditTableModal({ open, onClose, table, sections, onSave, onCreateGuests, onDelete }) {
   const [formData, setFormData] = useState({
     table_number: '',
     guest_count: 0,
@@ -212,12 +212,26 @@ export default function EditTableModal({ open, onClose, table, sections, onSave,
         </div>
 
         <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={onClose} className="rounded-xl">
-            Cancel
-          </Button>
-          <Button onClick={handleSave} className="bg-amber-700 hover:bg-amber-800 dark:bg-amber-600 dark:hover:bg-amber-700 rounded-xl">
-            {table?.id ? 'Save Changes' : 'Add Table'}
-          </Button>
+          <div className="flex flex-1 justify-between items-center gap-2">
+            {table?.id ? (
+              <Button
+                type="button"
+                variant="outline"
+                className="rounded-xl text-red-700 border-red-200 hover:bg-red-50"
+                onClick={() => onDelete?.(table)}
+              >
+                Delete Table
+              </Button>
+            ) : <span />}
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={onClose} className="rounded-xl">
+                Cancel
+              </Button>
+              <Button onClick={handleSave} className="bg-amber-700 hover:bg-amber-800 dark:bg-amber-600 dark:hover:bg-amber-700 rounded-xl">
+                {table?.id ? 'Save Changes' : 'Add Table'}
+              </Button>
+            </div>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>

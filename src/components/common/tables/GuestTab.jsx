@@ -8,10 +8,10 @@ export default function GuestTab({ guest, isActive = false, onClick, hasAllergen
       type="button"
       onClick={onClick}
       className={cn(
-        "relative inline-flex items-center gap-2 min-w-[120px] w-full px-3 py-2 rounded-xl transition-all duration-200",
-        isActive 
-          ? "bg-stone-900 text-white shadow-lg" 
-          : "bg-stone-100 text-stone-600"
+        "relative inline-flex items-center gap-2 min-w-[110px] px-3 py-2 rounded-full text-sm font-semibold border transition-colors duration-200 shrink-0 whitespace-nowrap",
+        isActive
+          ? "bg-amber-700 text-white border-amber-700 shadow-sm"
+          : "bg-white text-stone-700 border-stone-200 hover:bg-stone-100 dark:bg-stone-800 dark:text-stone-100 dark:border-stone-700"
       )}
     >
       <div className="flex items-center gap-2 overflow-hidden flex-1">
