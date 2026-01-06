@@ -1,4 +1,4 @@
-name = "tablemaster"
+name = "tablemaster2"
 main = "src/worker.js"
 compatibility_date = "2025-12-30"
 
