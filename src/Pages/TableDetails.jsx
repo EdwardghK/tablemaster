@@ -424,41 +424,43 @@ export default function TableDetails() {
                 <div className="flex-1 min-w-0">
                   <div className="relative rounded-2xl border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 px-2 py-1.5">
                     {sortedGuests.length > 0 ? (
-                      <div className="relative" style={{ height: `${wheelSize}px` }}>
+                      <div className="relative flex items-center justify-center" style={{ height: `${optionItemHeight}px` }}>
                         <div
-                          className="pointer-events-none absolute inset-x-2 top-1/2 -translate-y-1/2 rounded-full border border-amber-300/60 bg-amber-100/30 dark:border-amber-500/40 dark:bg-amber-900/15"
-                          style={{ height: `${optionItemHeight}px` }}
+                          className="pointer-events-none absolute inset-y-0 left-1/2 -translate-x-1/2 rounded-full border border-amber-300/60 bg-amber-100/30 dark:border-amber-500/40 dark:bg-amber-900/15"
+                          style={{ width: `${optionItemHeight}px` }}
                         />
-                        <WheelPickerWrapper
-                          className="w-full h-full border-none bg-transparent px-0 shadow-none [&_[data-rwp]]:!h-[var(--guest-wheel-height)]"
-                          style={{ "--guest-wheel-height": `${wheelSize}px` }}
-                        >
-                          <WheelPicker
-                            options={guestOptions}
-                            value={currentGuest?.id}
-                            onValueChange={(val) => {
-                              if (typeof val === "string" && val.startsWith("__pad__start")) {
-                                if (sortedGuests[0]) setActiveGuestId(sortedGuests[0].id);
-                                return;
-                              }
-                              if (typeof val === "string" && val.startsWith("__pad__end")) {
-                                if (sortedGuests[sortedGuests.length - 1]) {
-                                  setActiveGuestId(sortedGuests[sortedGuests.length - 1].id);
+                        <div className="-rotate-90" style={{ height: `${wheelSize}px`, width: `${wheelSize}px` }}>
+                          <WheelPickerWrapper
+                            className="w-full h-full border-none bg-transparent px-0 shadow-none [&_[data-rwp]]:!h-[var(--guest-wheel-height)] [&_[data-rwp]]:[-webkit-mask-image:none] [&_[data-rwp]]:[mask-image:none]"
+                            style={{ "--guest-wheel-height": `${wheelSize}px` }}
+                          >
+                            <WheelPicker
+                              options={guestOptions}
+                              value={currentGuest?.id}
+                              onValueChange={(val) => {
+                                if (typeof val === "string" && val.startsWith("__pad__start")) {
+                                  if (sortedGuests[0]) setActiveGuestId(sortedGuests[0].id);
+                                  return;
                                 }
-                                return;
-                              }
-                              setActiveGuestId(val);
-                            }}
-                            visibleCount={visibleCount}
-                            infinite={false}
-                            optionItemHeight={optionItemHeight}
-                            classNames={{
-                              optionItem: "text-base text-stone-500 dark:text-stone-400",
-                              highlightWrapper: "bg-transparent",
-                              highlightItem: "text-lg font-semibold text-stone-900 dark:text-stone-100",
-                            }}
-                          />
-                        </WheelPickerWrapper>
+                                if (typeof val === "string" && val.startsWith("__pad__end")) {
+                                  if (sortedGuests[sortedGuests.length - 1]) {
+                                    setActiveGuestId(sortedGuests[sortedGuests.length - 1].id);
+                                  }
+                                  return;
+                                }
+                                setActiveGuestId(val);
+                              }}
+                              visibleCount={visibleCount}
+                              infinite={false}
+                              optionItemHeight={optionItemHeight}
+                              classNames={{
+                                optionItem: "rotate-90 text-base text-stone-500 dark:text-stone-400",
+                                highlightWrapper: "bg-transparent",
+                                highlightItem: "rotate-90 text-lg font-semibold text-stone-900 dark:text-stone-100",
+                              }}
+                            />
+                          </WheelPickerWrapper>
+                        </div>
                       </div>
                     ) : (
                       <div className="text-sm text-stone-500 text-center py-1">No guests</div>
