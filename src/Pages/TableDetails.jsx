@@ -406,9 +406,10 @@ export default function TableDetails() {
               label: "",
               value: `__pad__end_${i}`,
             }));
-            const visibleCount = 5;
-            const optionItemHeight = 36;
-            const wheelSize = visibleCount * optionItemHeight;
+            const visibleItems = 5;
+            const visibleCount = 9;
+            const optionItemHeight = 44;
+            const wheelSize = visibleItems * optionItemHeight;
             const guestOptions = [
               ...padStart,
               ...sortedGuests.map((guest) => ({
@@ -428,7 +429,10 @@ export default function TableDetails() {
                           className="pointer-events-none absolute inset-x-2 top-1/2 -translate-y-1/2 rounded-full border border-amber-300/60 bg-amber-100/30 dark:border-amber-500/40 dark:bg-amber-900/15"
                           style={{ height: `${optionItemHeight}px` }}
                         />
-                        <WheelPickerWrapper className="w-full h-full border-none bg-transparent px-0 shadow-none">
+                        <WheelPickerWrapper
+                          className="w-full h-full border-none bg-transparent px-0 shadow-none [&_[data-rwp]]:!h-[var(--guest-wheel-height)]"
+                          style={{ "--guest-wheel-height": `${wheelSize}px` }}
+                        >
                           <WheelPicker
                             options={guestOptions}
                             value={currentGuest?.id}
@@ -451,7 +455,7 @@ export default function TableDetails() {
                             classNames={{
                               optionItem: "text-base text-stone-500 dark:text-stone-400",
                               highlightWrapper: "bg-transparent",
-                              highlightItem: "font-semibold",
+                              highlightItem: "text-lg font-semibold text-stone-900 dark:text-stone-100",
                             }}
                           />
                         </WheelPickerWrapper>
