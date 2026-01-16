@@ -50,6 +50,7 @@ export default function TableDetails() {
   const [editOrderModal, setEditOrderModal] = useState({ open: false, item: null, notes: '', mods: [] });
   const guestScrollRef = useRef(null);
   const guestItemRef = useRef(null);
+  const guestIgnoreScrollRef = useRef(0);
   const [guestPillWidth, setGuestPillWidth] = useState(0);
   const [guestSidePadding, setGuestSidePadding] = useState(0);
   const courseOptions = ['Unassigned', 'Course 1', 'Course 2', 'Course 3', 'Course 4', 'Course 5'];
@@ -160,6 +161,7 @@ export default function TableDetails() {
     let raf = 0;
 
     const onScroll = () => {
+      if (Date.now() < guestIgnoreScrollRef.current) return;
       if (raf) cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() => {
         const center = scroller.scrollLeft + scroller.clientWidth / 2;
@@ -200,6 +202,18 @@ export default function TableDetails() {
     const left = Math.max(0, targetCenter - scroller.clientWidth / 2);
     scroller.scrollTo({ left, behavior: 'smooth' });
   }, [activeGuestId, guestSidePadding, guestPillWidth]);
+
+  const handleSelectGuestPill = (guestId) => {
+    guestIgnoreScrollRef.current = Date.now() + 400;
+    setActiveGuestId(guestId);
+    const scroller = guestScrollRef.current;
+    if (!scroller) return;
+    const target = scroller.querySelector(`[data-guest-id="${guestId}"]`);
+    if (!target) return;
+    const targetCenter = target.offsetLeft + target.offsetWidth / 2;
+    const left = Math.max(0, targetCenter - scroller.clientWidth / 2);
+    scroller.scrollTo({ left, behavior: 'smooth' });
+  };
 
   const activeGuest = guests.find(g => g.id === activeGuestId);
   const guestAllergens = [
@@ -469,7 +483,6 @@ export default function TableDetails() {
                   <div className="relative rounded-2xl border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 px-2 py-1.5">
                     {sortedGuests.length > 0 ? (
                       <div className="relative">
-                        <div className="pointer-events-none absolute inset-y-2 left-1/2 w-16 -translate-x-1/2 rounded-full border border-amber-300/60 bg-amber-100/30 dark:border-amber-500/40 dark:bg-amber-900/15" />
                         <div
                           ref={guestScrollRef}
                           className="flex items-center gap-2 overflow-x-auto scrollbar-hide snap-x snap-mandatory py-1"
@@ -490,7 +503,8 @@ export default function TableDetails() {
                                     ? "bg-amber-100 text-amber-900 border-amber-200 dark:bg-amber-900/70 dark:text-amber-100 dark:border-amber-500/60"
                                     : "bg-stone-100 border-stone-200 text-stone-600 dark:bg-stone-800 dark:border-stone-700 dark:text-stone-300"
                                 )}
-                                onClick={() => setActiveGuestId(guest.id)}
+                                onClick={() => handleSelectGuestPill(guest.id)}
+                                onPointerUp={() => handleSelectGuestPill(guest.id)}
                                 aria-label={`Select guest s${guest.guest_number || ''}`}
                               >
                                 s{guest.guest_number || ''}
