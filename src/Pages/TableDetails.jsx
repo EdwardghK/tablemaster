@@ -13,6 +13,7 @@ import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
 import { Label } from '@/components/ui/Label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/Dialog';
+import { WheelPicker, WheelPickerWrapper } from '@/components/wheel-picker';
 import { toast } from 'sonner';
 import { TableStorage } from '@/api/localStorageHelpers/tables';
 import { GuestStorage } from '@/api/localStorageHelpers/guests';
@@ -401,31 +402,26 @@ export default function TableDetails() {
                 <div className="flex-1 min-w-0">
                   <div className="relative rounded-2xl border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 px-2 py-1.5">
                     {sortedGuests.length > 0 ? (
-                      <div className="relative">
-                        <div className="pointer-events-none absolute inset-y-0 left-1/2 w-16 -translate-x-1/2 rounded-full border border-amber-300/60 bg-amber-100/20 dark:border-amber-500/40 dark:bg-amber-900/10" />
-                        <div
-                          className="flex items-center gap-2 overflow-x-auto scrollbar-hide snap-x snap-mandatory"
-                          style={{ paddingLeft: "calc(50% - 2rem)", paddingRight: "calc(50% - 2rem)" }}
-                        >
-                        {sortedGuests.map((guest) => {
-                          const isActive = guest.id === activeGuestId;
-                          return (
-                            <button
-                              key={guest.id}
-                              type="button"
-                              className={cn(
-                                "shrink-0 px-3 py-1.5 rounded-full border text-sm transition-colors snap-center",
-                                isActive
-                                  ? "bg-amber-100 text-amber-900 border-amber-200 dark:bg-amber-900/70 dark:text-amber-100 dark:border-amber-500/60"
-                                  : "bg-stone-100 border-stone-200 text-stone-600 dark:bg-stone-800 dark:border-stone-700 dark:text-stone-300"
-                              )}
-                              onClick={() => setActiveGuestId(guest.id)}
-                              aria-label={`Select guest s${guest.guest_number || ''}`}
-                            >
-                              s{guest.guest_number || ''}
-                            </button>
-                          );
-                        })}
+                      <div className="flex items-center justify-center">
+                        <div className="-rotate-90 w-full max-w-full">
+                          <WheelPickerWrapper className="w-full border-none bg-transparent px-0 shadow-none">
+                            <WheelPicker
+                              options={sortedGuests.map((guest) => ({
+                                label: `s${guest.guest_number || ''}`,
+                                value: guest.id,
+                              }))}
+                              value={currentGuest?.id}
+                              onValueChange={(val) => setActiveGuestId(val)}
+                              visibleCount={5}
+                              infinite={false}
+                              optionItemHeight={36}
+                              classNames={{
+                                optionItem: "rotate-90 text-base text-stone-500 dark:text-stone-400",
+                                highlightWrapper: "bg-amber-100/70 text-amber-900 dark:bg-amber-900/60 dark:text-amber-100",
+                                highlightItem: "rotate-90 font-semibold",
+                              }}
+                            />
+                          </WheelPickerWrapper>
                         </div>
                       </div>
                     ) : (
