@@ -6,7 +6,7 @@ export const Textarea = ({ className, ...props }) => {
   return (
     <textarea
       className={cn(
-        "w-full px-3 py-2 border rounded-xl text-base text-stone-900 placeholder-stone-400 focus:ring-2 focus:ring-amber-400 focus:border-amber-400 outline-none resize-none",
+        "w-full px-3 py-2 border rounded-xl text-base text-stone-900 placeholder-stone-400 bg-white focus:ring-2 focus:ring-amber-400 focus:border-amber-400 outline-none resize-none dark:bg-stone-800 dark:text-stone-100 dark:border-stone-700 dark:placeholder-stone-400",
         className
       )}
       {...props}

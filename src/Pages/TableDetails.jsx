@@ -894,13 +894,13 @@ export default function TableDetails() {
           {editOrderModal.item ? (
             <div className="space-y-3">
               <div>
-                <p className="text-sm font-medium text-stone-900">{editOrderModal.item.menu_item_name}</p>
+                <p className="text-sm font-medium text-stone-900 dark:text-stone-100">{editOrderModal.item.menu_item_name}</p>
                 {(() => {
                   const matchedMenu = findMenuItemForOrderItem(editOrderModal.item);
                   const mods = matchedMenu?.common_mods || matchedMenu?.common_modifications || [];
                   return (
                     <div className="space-y-2 mt-2">
-                      <div className="text-xs text-stone-500">Common mods</div>
+                      <div className="text-xs text-stone-500 dark:text-stone-300">Common mods</div>
                       {mods.length > 0 ? (
                         <>
                           <div className="flex flex-wrap gap-2">
@@ -913,8 +913,8 @@ export default function TableDetails() {
                                   className={cn(
                                     "text-xs px-2 py-1 rounded-full border",
                                     selected
-                                      ? "bg-amber-100 border-amber-300 text-amber-800"
-                                      : "bg-stone-200 border-stone-300 text-stone-700 hover:bg-stone-300"
+                                      ? "bg-amber-100 border-amber-300 text-amber-800 dark:bg-amber-900/70 dark:border-amber-500/60 dark:text-amber-100"
+                                      : "bg-stone-200 border-stone-300 text-stone-700 hover:bg-stone-300 dark:bg-stone-800 dark:border-stone-700 dark:text-stone-200 dark:hover:bg-stone-700"
                                   )}
                                   onClick={() => {
                                     setEditOrderModal((prev) => {
@@ -931,19 +931,19 @@ export default function TableDetails() {
                             })}
                           </div>
                           {(editOrderModal.mods || []).length > 0 && (
-                            <div className="text-xs text-stone-600">
+                            <div className="text-xs text-stone-600 dark:text-stone-300">
                               Applied: {(editOrderModal.mods || []).join(", ")}
                             </div>
                           )}
                         </>
                       ) : (
-                        <div className="text-xs text-stone-500">No saved mods for this item</div>
+                        <div className="text-xs text-stone-500 dark:text-stone-300">No saved mods for this item</div>
                       )}
                     </div>
                   );
                 })()}
                 {editOrderModal.item.modifications?.length ? (
-                  <p className="text-xs text-stone-500 mt-1">Mods: {editOrderModal.item.modifications.join(', ')}</p>
+                  <p className="text-xs text-stone-500 dark:text-stone-300 mt-1">Mods: {editOrderModal.item.modifications.join(', ')}</p>
                 ) : null}
               </div>
               <div className="space-y-2">
