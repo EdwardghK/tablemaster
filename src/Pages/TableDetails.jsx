@@ -51,6 +51,8 @@ export default function TableDetails() {
   const courseOptions = ['Unassigned', 'Course 1', 'Course 2', 'Course 3', 'Course 4', 'Course 5'];
   const guestScrollRef = useRef(null);
   const guestItemRefs = useRef({});
+  const guestScrollRaf = useRef(null);
+  const guestScrollIdle = useRef(null);
 
   useEffect(() => {
     if (!activeGuestId) return;
@@ -59,6 +61,13 @@ export default function TableDetails() {
       node.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
     }
   }, [activeGuestId, guests.length]);
+
+  useEffect(() => {
+    return () => {
+      if (guestScrollRaf.current) cancelAnimationFrame(guestScrollRaf.current);
+      if (guestScrollIdle.current) clearTimeout(guestScrollIdle.current);
+    };
+  }, []);
 
   // Load table info
   useEffect(() => {
@@ -409,11 +418,40 @@ export default function TableDetails() {
             return (
               <div className="flex items-center gap-2 py-1">
                 <div className="flex-1 min-w-0">
-                  <div className="rounded-2xl border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 px-2 py-1.5">
+                  <div className="relative rounded-2xl border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 px-2 py-1.5">
                     {sortedGuests.length > 0 ? (
                       <div
                         ref={guestScrollRef}
-                        className="flex items-center gap-2 overflow-x-auto scrollbar-hide snap-x snap-mandatory px-2 w-full min-w-0 max-w-full"
+                        className="relative flex items-center gap-2 overflow-x-auto scrollbar-hide snap-x snap-mandatory px-6 w-full min-w-0 max-w-full"
+                        onScroll={() => {
+                          if (!guestScrollRef.current) return;
+                          if (guestScrollRaf.current) cancelAnimationFrame(guestScrollRaf.current);
+                          guestScrollRaf.current = requestAnimationFrame(() => {
+                            const container = guestScrollRef.current;
+                            const center = container.scrollLeft + container.clientWidth / 2;
+                            let closestId = null;
+                            let closestDist = Number.POSITIVE_INFINITY;
+                            Object.entries(guestItemRefs.current).forEach(([id, node]) => {
+                              if (!node) return;
+                              const nodeCenter = node.offsetLeft + node.offsetWidth / 2;
+                              const dist = Math.abs(center - nodeCenter);
+                              if (dist < closestDist) {
+                                closestDist = dist;
+                                closestId = id;
+                              }
+                            });
+                            if (closestId && `${closestId}` !== `${activeGuestId}`) {
+                              setActiveGuestId(closestId);
+                            }
+                          });
+                          if (guestScrollIdle.current) clearTimeout(guestScrollIdle.current);
+                          guestScrollIdle.current = setTimeout(() => {
+                            const node = guestItemRefs.current[activeGuestId];
+                            if (node && guestScrollRef.current) {
+                              node.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                            }
+                          }, 120);
+                        }}
                       >
                         {sortedGuests.map((guest) => {
                           const isActive = guest.id === activeGuestId;
@@ -423,12 +461,18 @@ export default function TableDetails() {
                               ref={(el) => { guestItemRefs.current[guest.id] = el; }}
                               type="button"
                               className={cn(
-                                "snap-center shrink-0 px-4 py-1.5 rounded-full border text-sm transition-colors",
+                                "snap-center shrink-0 w-12 px-2 py-1.5 rounded-full border text-sm transition-colors text-center",
                                 isActive
                                   ? "bg-amber-100 text-amber-900 border-amber-200 dark:bg-amber-900/70 dark:text-amber-100 dark:border-amber-500/60"
                                   : "bg-stone-100 border-stone-200 text-stone-600 dark:bg-stone-800 dark:border-stone-700 dark:text-stone-300"
                               )}
-                              onClick={() => setActiveGuestId(guest.id)}
+                              onClick={() => {
+                                setActiveGuestId(guest.id);
+                                const node = guestItemRefs.current[guest.id];
+                                if (node && guestScrollRef.current) {
+                                  node.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                                }
+                              }}
                               aria-label={`Select guest s${guest.guest_number || ''}`}
                             >
                               s{guest.guest_number || ''}
@@ -439,6 +483,7 @@ export default function TableDetails() {
                     ) : (
                       <div className="text-sm text-stone-500 text-center py-1">No guests</div>
                     )}
+                    <div className="pointer-events-none absolute inset-y-1 left-1/2 -translate-x-1/2 w-12 rounded-full border border-amber-300/60 bg-amber-100/15 dark:border-amber-500/40 dark:bg-amber-900/10" />
 
                     {currentGuest ? (
                       <button
