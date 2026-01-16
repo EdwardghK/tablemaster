@@ -403,7 +403,7 @@ export default function TableDetails() {
                   <div className="relative rounded-2xl border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 px-2 py-1.5">
                     {sortedGuests.length > 0 ? (
                       <WheelPickerWrapper className="w-full max-w-full border-none bg-transparent px-0 shadow-none">
-                        <div className="mx-auto w-full max-w-xs">
+                        <div className="mx-auto w-full max-w-sm">
                           <div className="-rotate-90">
                             <WheelPicker
                               options={sortedGuests.map((guest) => ({
@@ -413,9 +413,9 @@ export default function TableDetails() {
                               value={currentGuest?.id}
                               onValueChange={(val) => setActiveGuestId(val)}
                               visibleCount={5}
-                              optionItemHeight={32}
+                              optionItemHeight={36}
                               classNames={{
-                                optionItem: "rotate-90 text-sm text-stone-500 dark:text-stone-400",
+                                optionItem: "rotate-90 text-base text-stone-500 dark:text-stone-400",
                                 highlightWrapper: "bg-amber-100/70 text-amber-900 dark:bg-amber-900/60 dark:text-amber-100",
                                 highlightItem: "rotate-90 font-semibold",
                               }}
