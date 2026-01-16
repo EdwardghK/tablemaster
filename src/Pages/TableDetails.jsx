@@ -437,7 +437,7 @@ export default function TableDetails() {
                           style={{ height: `${wheelSize}px`, width: `${wheelSize}px` }}
                         >
                           <WheelPickerWrapper
-                            className="w-full h-full border-none bg-transparent px-0 shadow-none [&_[data-rwp]]:!h-[var(--guest-wheel-height)] [&_[data-rwp]]:[-webkit-mask-image:none] [&_[data-rwp]]:[mask-image:none] [&_[data-rwp-options]]:hidden"
+                            className="w-full h-full border-none bg-transparent px-0 shadow-none [&_[data-rwp]]:!h-[var(--guest-wheel-height)] [&_[data-rwp-options]]:opacity-60"
                             style={{ "--guest-wheel-height": `${wheelSize}px` }}
                           >
                             <WheelPicker
