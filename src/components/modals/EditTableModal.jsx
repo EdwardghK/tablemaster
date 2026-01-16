@@ -43,6 +43,11 @@ export default function EditTableModal({ open, onClose, table, sections, onSave,
     const toNumOrNull = (val) =>
       val === '' || val === null || val === undefined ? null : Number(val);
 
+    if (!formData.table_number?.toString().trim()) {
+      window.alert('Table number is required');
+      return;
+    }
+
     const payload = {
       ...table,
       ...formData,
@@ -52,11 +57,17 @@ export default function EditTableModal({ open, onClose, table, sections, onSave,
       tax_rate: toNumOrNull(formData.tax_rate),
       budget_include_tax: !!formData.budget_include_tax,
     };
-    const savedTable = await onSave(payload);
-    if (!table?.id && formData.guest_count > 0 && onCreateGuests) {
-      onCreateGuests(savedTable, formData.guest_count);
+
+    try {
+      const savedTable = await onSave(payload);
+      if (!table?.id && formData.guest_count > 0 && onCreateGuests) {
+        await onCreateGuests(savedTable, formData.guest_count);
+      }
+      onClose();
+    } catch (err) {
+      console.error('Save table failed:', err);
+      window.alert(err?.message || 'Could not save table');
     }
-    onClose();
   };
 
   return (
