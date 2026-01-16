@@ -474,25 +474,7 @@ export default function TableDetails() {
           )}
 
             {menuSource === 'default' ? (
-              <div
-                className="mt-3 space-y-4"
-                onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX; }}
-                onTouchEnd={(e) => {
-                  if (touchStartX.current === null) return;
-                  const delta = e.changedTouches[0].clientX - touchStartX.current;
-                  const threshold = 40;
-                  if (Math.abs(delta) > threshold) {
-                    const sortedGuests = [...guests].sort((a, b) => (a.guest_number || 0) - (b.guest_number || 0));
-                    const currentIndex = sortedGuests.findIndex(g => g.id === activeGuestId);
-                    if (delta < 0 && currentIndex < sortedGuests.length - 1) {
-                      setActiveGuestId(sortedGuests[currentIndex + 1]?.id);
-                    } else if (delta > 0 && currentIndex > 0) {
-                      setActiveGuestId(sortedGuests[currentIndex - 1]?.id);
-                    }
-                  }
-                  touchStartX.current = null;
-                }}
-              >
+              <div className="mt-3 space-y-4">
                 {(() => {
                   const categoryOrder = [
                     'appetizers',
@@ -610,25 +592,7 @@ export default function TableDetails() {
                 })()}
               </div>
             ) : (
-            <div
-              className="mt-3 space-y-3"
-              onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX; }}
-              onTouchEnd={(e) => {
-                if (touchStartX.current === null) return;
-                const delta = e.changedTouches[0].clientX - touchStartX.current;
-                const threshold = 40;
-                if (Math.abs(delta) > threshold) {
-                  const sortedGuests = [...guests].sort((a, b) => (a.guest_number || 0) - (b.guest_number || 0));
-                  const currentIndex = sortedGuests.findIndex(g => g.id === activeGuestId);
-                  if (delta < 0 && currentIndex < sortedGuests.length - 1) {
-                    setActiveGuestId(sortedGuests[currentIndex + 1]?.id);
-                  } else if (delta > 0 && currentIndex > 0) {
-                    setActiveGuestId(sortedGuests[currentIndex - 1]?.id);
-                  }
-                }
-                touchStartX.current = null;
-              }}
-            >
+            <div className="mt-3 space-y-3">
               {(() => {
                 const selected = prefixedMenus.find(m => m.id === menuSource);
                 if (!selected) return <p className="text-sm text-stone-500">No menu selected.</p>;
