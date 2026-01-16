@@ -423,37 +423,38 @@ export default function TableDetails() {
                 <div className="flex-1 min-w-0">
                   <div className="relative rounded-2xl border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 px-2 py-1.5">
                     {sortedGuests.length > 0 ? (
-                      <div className="relative h-16 overflow-hidden flex items-center justify-center">
-                        <div className="pointer-events-none absolute inset-y-2 left-1/2 w-[36px] -translate-x-1/2 rounded-full border border-amber-300/60 bg-amber-100/30 dark:border-amber-500/40 dark:bg-amber-900/15" />
-                        <div className="-rotate-90" style={{ height: `${wheelSize}px`, width: `${wheelSize}px` }}>
-                          <WheelPickerWrapper className="w-full h-full border-none bg-transparent px-0 shadow-none">
-                            <WheelPicker
-                              options={guestOptions}
-                              value={currentGuest?.id}
-                              onValueChange={(val) => {
-                                if (typeof val === "string" && val.startsWith("__pad__start")) {
-                                  if (sortedGuests[0]) setActiveGuestId(sortedGuests[0].id);
-                                  return;
+                      <div className="relative" style={{ height: `${wheelSize}px` }}>
+                        <div
+                          className="pointer-events-none absolute inset-x-2 top-1/2 -translate-y-1/2 rounded-full border border-amber-300/60 bg-amber-100/30 dark:border-amber-500/40 dark:bg-amber-900/15"
+                          style={{ height: `${optionItemHeight}px` }}
+                        />
+                        <WheelPickerWrapper className="w-full h-full border-none bg-transparent px-0 shadow-none">
+                          <WheelPicker
+                            options={guestOptions}
+                            value={currentGuest?.id}
+                            onValueChange={(val) => {
+                              if (typeof val === "string" && val.startsWith("__pad__start")) {
+                                if (sortedGuests[0]) setActiveGuestId(sortedGuests[0].id);
+                                return;
+                              }
+                              if (typeof val === "string" && val.startsWith("__pad__end")) {
+                                if (sortedGuests[sortedGuests.length - 1]) {
+                                  setActiveGuestId(sortedGuests[sortedGuests.length - 1].id);
                                 }
-                                if (typeof val === "string" && val.startsWith("__pad__end")) {
-                                  if (sortedGuests[sortedGuests.length - 1]) {
-                                    setActiveGuestId(sortedGuests[sortedGuests.length - 1].id);
-                                  }
-                                  return;
-                                }
-                                setActiveGuestId(val);
-                              }}
-                              visibleCount={visibleCount}
-                              infinite={false}
-                              optionItemHeight={optionItemHeight}
-                              classNames={{
-                                optionItem: "rotate-90 text-base text-stone-500 dark:text-stone-400 min-w-[48px]",
-                                highlightWrapper: "bg-transparent",
-                                highlightItem: "rotate-90 font-semibold",
-                              }}
-                            />
-                          </WheelPickerWrapper>
-                        </div>
+                                return;
+                              }
+                              setActiveGuestId(val);
+                            }}
+                            visibleCount={visibleCount}
+                            infinite={false}
+                            optionItemHeight={optionItemHeight}
+                            classNames={{
+                              optionItem: "text-base text-stone-500 dark:text-stone-400",
+                              highlightWrapper: "bg-transparent",
+                              highlightItem: "font-semibold",
+                            }}
+                          />
+                        </WheelPickerWrapper>
                       </div>
                     ) : (
                       <div className="text-sm text-stone-500 text-center py-1">No guests</div>
