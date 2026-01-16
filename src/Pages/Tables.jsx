@@ -93,10 +93,15 @@ export default function Tables() {
   const handleDeleteTable = async (table) => {
     const confirmed = window.confirm(`Delete table ${table.table_number || ''}?`);
     if (!confirmed) return;
-    await TableStorage.deleteTable(table.id);
-    setGuests((prev) => prev.filter((g) => g.table_id !== table.id));
-    setOrderItems((prev) => prev.filter((o) => o.table_id !== table.id));
-    setTables(await TableStorage.getAllTables());
+    try {
+      await TableStorage.deleteTable(table.id);
+      setGuests((prev) => prev.filter((g) => g.table_id !== table.id));
+      setOrderItems((prev) => prev.filter((o) => o.table_id !== table.id));
+      setTables(await TableStorage.getAllTables());
+    } catch (err) {
+      console.error('Failed to delete table:', err);
+      window.alert(err?.message || 'Could not delete table');
+    }
   };
 
   return (
@@ -175,6 +180,7 @@ export default function Tables() {
         table={editModal.table}
         onSave={handleSaveTable}
         onCreateGuests={handleCreateGuests}
+        onDelete={handleDeleteTable}
       />
 
       <BottomNav />
