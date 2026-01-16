@@ -397,27 +397,55 @@ export default function TableDetails() {
               ? (currentGuest.allergens?.length || currentGuest.custom_allergens?.length) > 0
               : false;
 
+            const padCount = 2;
+            const padStart = Array.from({ length: padCount }, (_, i) => ({
+              label: "",
+              value: `__pad__start_${i}`,
+            }));
+            const padEnd = Array.from({ length: padCount }, (_, i) => ({
+              label: "",
+              value: `__pad__end_${i}`,
+            }));
+            const guestOptions = [
+              ...padStart,
+              ...sortedGuests.map((guest) => ({
+                label: `s${guest.guest_number || ''}`,
+                value: guest.id,
+              })),
+              ...padEnd,
+            ];
+
             return (
               <div className="flex items-center gap-2 py-1">
                 <div className="flex-1 min-w-0">
                   <div className="relative rounded-2xl border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 px-2 py-1.5">
                     {sortedGuests.length > 0 ? (
-                      <div className="flex items-center justify-center">
-                        <div className="-rotate-90 w-full max-w-full">
+                      <div className="relative h-16 overflow-hidden">
+                        <div className="pointer-events-none absolute inset-y-2 left-1/2 w-12 -translate-x-1/2 rounded-full border border-amber-300/60 bg-amber-100/30 dark:border-amber-500/40 dark:bg-amber-900/15" />
+                        <div className="-rotate-90 w-full" style={{ height: "180px" }}>
                           <WheelPickerWrapper className="w-full border-none bg-transparent px-0 shadow-none">
                             <WheelPicker
-                              options={sortedGuests.map((guest) => ({
-                                label: `s${guest.guest_number || ''}`,
-                                value: guest.id,
-                              }))}
+                              options={guestOptions}
                               value={currentGuest?.id}
-                              onValueChange={(val) => setActiveGuestId(val)}
+                              onValueChange={(val) => {
+                                if (typeof val === "string" && val.startsWith("__pad__start")) {
+                                  if (sortedGuests[0]) setActiveGuestId(sortedGuests[0].id);
+                                  return;
+                                }
+                                if (typeof val === "string" && val.startsWith("__pad__end")) {
+                                  if (sortedGuests[sortedGuests.length - 1]) {
+                                    setActiveGuestId(sortedGuests[sortedGuests.length - 1].id);
+                                  }
+                                  return;
+                                }
+                                setActiveGuestId(val);
+                              }}
                               visibleCount={5}
                               infinite={false}
                               optionItemHeight={36}
                               classNames={{
                                 optionItem: "rotate-90 text-base text-stone-500 dark:text-stone-400",
-                                highlightWrapper: "bg-amber-100/70 text-amber-900 dark:bg-amber-900/60 dark:text-amber-100",
+                                highlightWrapper: "bg-transparent",
                                 highlightItem: "rotate-90 font-semibold",
                               }}
                             />
