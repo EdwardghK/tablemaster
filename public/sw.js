@@ -1,5 +1,5 @@
-const CACHE_NAME = 'tablemaster-cache-v1';
-const PRECACHE_URLS = ['/', '/index.html', '/manifest.webmanifest', '/favicon.ico'];
+const CACHE_NAME = 'tablemaster-cache-v2';
+const PRECACHE_URLS = ['/', '/index.html', '/manifest.webmanifest'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
