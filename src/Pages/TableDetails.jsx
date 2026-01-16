@@ -401,7 +401,9 @@ export default function TableDetails() {
                 <div className="flex-1 min-w-0">
                   <div className="relative rounded-2xl border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 px-2 py-1.5">
                     {sortedGuests.length > 0 ? (
-                      <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide px-1">
+                      <div className="relative">
+                        <div className="pointer-events-none absolute inset-y-0 left-1/2 w-16 -translate-x-1/2 rounded-full border border-amber-300/60 bg-amber-100/20 dark:border-amber-500/40 dark:bg-amber-900/10" />
+                        <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide px-6 snap-x snap-mandatory">
                         {sortedGuests.map((guest) => {
                           const isActive = guest.id === activeGuestId;
                           return (
@@ -409,7 +411,7 @@ export default function TableDetails() {
                               key={guest.id}
                               type="button"
                               className={cn(
-                                "shrink-0 px-3 py-1.5 rounded-full border text-sm transition-colors",
+                                "shrink-0 px-3 py-1.5 rounded-full border text-sm transition-colors snap-center",
                                 isActive
                                   ? "bg-amber-100 text-amber-900 border-amber-200 dark:bg-amber-900/70 dark:text-amber-100 dark:border-amber-500/60"
                                   : "bg-stone-100 border-stone-200 text-stone-600 dark:bg-stone-800 dark:border-stone-700 dark:text-stone-300"
@@ -421,6 +423,7 @@ export default function TableDetails() {
                             </button>
                           );
                         })}
+                        </div>
                       </div>
                     ) : (
                       <div className="text-sm text-stone-500 text-center py-1">No guests</div>
