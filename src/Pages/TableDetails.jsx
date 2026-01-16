@@ -413,11 +413,12 @@ export default function TableDetails() {
                               value={currentGuest?.id}
                               onValueChange={(val) => setActiveGuestId(val)}
                               visibleCount={5}
+                              infinite={false}
                               optionItemHeight={36}
                               classNames={{
                                 optionItem: "rotate-90 text-base text-stone-500 dark:text-stone-400",
                                 highlightWrapper: "bg-amber-100/70 text-amber-900 dark:bg-amber-900/60 dark:text-amber-100",
-                                highlightItem: "rotate-90 font-semibold",
+                                highlightItem: "rotate-90 font-semibold scale-110",
                               }}
                             />
                           </div>
