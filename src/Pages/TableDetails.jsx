@@ -417,28 +417,67 @@ export default function TableDetails() {
                       <ChevronLeft className="h-5 w-5" />
                     </button>
 
-                    <button
-                      type="button"
-                      className="flex-1 min-w-0 px-2 py-1 rounded-xl text-left"
-                      onClick={() => currentGuest && setEditGuestModal({ open: true, guest: currentGuest })}
-                      aria-label="Edit guest"
-                    >
+                    <div className="flex-1 min-w-0 px-2">
                       {currentGuest ? (
                         <div className="flex items-center justify-center gap-2">
-                          <span className="text-sm font-semibold text-stone-900 dark:text-stone-100">
+                          <button
+                            type="button"
+                            className={cn(
+                              "px-2 py-1 text-xs rounded-full border",
+                              canGoPrev
+                                ? "bg-stone-100 border-stone-200 text-stone-600 dark:bg-stone-800 dark:border-stone-700 dark:text-stone-300"
+                                : "bg-stone-100/50 border-stone-200/50 text-stone-400 dark:bg-stone-800/40 dark:border-stone-700/40 dark:text-stone-500"
+                            )}
+                            onClick={() => {
+                              if (!canGoPrev) return;
+                              setActiveGuestId(sortedGuests[currentIndex - 1]?.id);
+                            }}
+                            disabled={!canGoPrev}
+                            aria-label="Select previous guest"
+                          >
+                            s{sortedGuests[currentIndex - 1]?.guest_number || ''}
+                          </button>
+                          <button
+                            type="button"
+                            className="px-3 py-1 text-sm rounded-full bg-amber-100 text-amber-900 border border-amber-200 dark:bg-amber-900/70 dark:text-amber-100 dark:border-amber-500/60"
+                            onClick={() => setEditGuestModal({ open: true, guest: currentGuest })}
+                            aria-label="Edit current guest"
+                          >
                             s{currentGuest.guest_number || ''}
-                          </span>
-                          <span className="text-xs text-stone-500 dark:text-stone-300">
-                            {currentCount} items
-                          </span>
-                          {currentHasAllergens && (
-                            <span className="inline-block w-2.5 h-2.5 rounded-full bg-red-500" aria-hidden="true" />
-                          )}
+                          </button>
+                          <button
+                            type="button"
+                            className={cn(
+                              "px-2 py-1 text-xs rounded-full border",
+                              canGoNext
+                                ? "bg-stone-100 border-stone-200 text-stone-600 dark:bg-stone-800 dark:border-stone-700 dark:text-stone-300"
+                                : "bg-stone-100/50 border-stone-200/50 text-stone-400 dark:bg-stone-800/40 dark:border-stone-700/40 dark:text-stone-500"
+                            )}
+                            onClick={() => {
+                              if (!canGoNext) return;
+                              setActiveGuestId(sortedGuests[currentIndex + 1]?.id);
+                            }}
+                            disabled={!canGoNext}
+                            aria-label="Select next guest"
+                          >
+                            s{sortedGuests[currentIndex + 1]?.guest_number || ''}
+                          </button>
                         </div>
                       ) : (
                         <span className="text-sm text-stone-500">No guests</span>
                       )}
-                    </button>
+                      {currentGuest ? (
+                        <div className="mt-1 flex items-center justify-center gap-2 text-xs text-stone-500 dark:text-stone-300">
+                          <span>{currentCount} items</span>
+                          {currentHasAllergens && (
+                            <span className="inline-flex items-center gap-1 text-red-500">
+                              <span className="inline-block w-2 h-2 rounded-full bg-red-500" aria-hidden="true" />
+                              Allergens
+                            </span>
+                          )}
+                        </div>
+                      ) : null}
+                    </div>
 
                     <button
                       type="button"
