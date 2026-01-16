@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useRef } from 'react';
 import { cn } from '@/utils';
 import BottomNav from '@/components/common/BottomNav';
 import CategoryTabs from '@/components/menu/CategoryTabs';
@@ -13,7 +13,6 @@ import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
 import { Label } from '@/components/ui/Label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/Dialog';
-import { WheelPicker, WheelPickerWrapper } from '@/components/wheel-picker';
 import { toast } from 'sonner';
 import { TableStorage } from '@/api/localStorageHelpers/tables';
 import { GuestStorage } from '@/api/localStorageHelpers/guests';
@@ -49,6 +48,10 @@ export default function TableDetails() {
   const [editGuestModal, setEditGuestModal] = useState({ open: false, guest: null });
   const [editTableModal, setEditTableModal] = useState(false);
   const [editOrderModal, setEditOrderModal] = useState({ open: false, item: null, notes: '', mods: [] });
+  const guestScrollRef = useRef(null);
+  const guestItemRef = useRef(null);
+  const [guestPillWidth, setGuestPillWidth] = useState(0);
+  const [guestSidePadding, setGuestSidePadding] = useState(0);
   const courseOptions = ['Unassigned', 'Course 1', 'Course 2', 'Course 3', 'Course 4', 'Course 5'];
 
   // Load table info
@@ -134,6 +137,69 @@ export default function TableDetails() {
       setSteakOriginFilter('all');
     }
   }, [activeCategory, steakOriginFilter]);
+
+  useEffect(() => {
+    const measure = () => {
+      const item = guestItemRef.current;
+      const scroller = guestScrollRef.current;
+      if (!item || !scroller) return;
+      const width = item.offsetWidth;
+      const side = Math.max(0, scroller.clientWidth / 2 - width / 2);
+      setGuestPillWidth(width);
+      setGuestSidePadding(side);
+    };
+
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [guests.length]);
+
+  useEffect(() => {
+    const scroller = guestScrollRef.current;
+    if (!scroller) return;
+    let raf = 0;
+
+    const onScroll = () => {
+      if (raf) cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        const center = scroller.scrollLeft + scroller.clientWidth / 2;
+        const items = scroller.querySelectorAll('[data-guest-pill="true"]');
+        let closestId = null;
+        let closestDist = Infinity;
+
+        items.forEach((item) => {
+          const id = item.getAttribute('data-guest-id');
+          if (!id) return;
+          const itemCenter = item.offsetLeft + item.offsetWidth / 2;
+          const dist = Math.abs(center - itemCenter);
+          if (dist < closestDist) {
+            closestDist = dist;
+            closestId = id;
+          }
+        });
+
+        if (closestId && `${closestId}` !== `${activeGuestId}`) {
+          setActiveGuestId(closestId);
+        }
+      });
+    };
+
+    scroller.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      scroller.removeEventListener('scroll', onScroll);
+      if (raf) cancelAnimationFrame(raf);
+    };
+  }, [activeGuestId, guests.length]);
+
+  useEffect(() => {
+    const scroller = guestScrollRef.current;
+    if (!scroller || !activeGuestId || !guestPillWidth) return;
+    const target = scroller.querySelector(`[data-guest-id="${activeGuestId}"]`);
+    if (!target) return;
+    const targetCenter = target.offsetLeft + target.offsetWidth / 2;
+    const left = Math.max(0, targetCenter - scroller.clientWidth / 2);
+    scroller.scrollTo({ left, behavior: 'smooth' });
+  }, [activeGuestId, guestSidePadding, guestPillWidth]);
 
   const activeGuest = guests.find(g => g.id === activeGuestId);
   const guestAllergens = [
@@ -397,75 +463,40 @@ export default function TableDetails() {
               ? (currentGuest.allergens?.length || currentGuest.custom_allergens?.length) > 0
               : false;
 
-            const padCount = 2;
-            const padStart = Array.from({ length: padCount }, (_, i) => ({
-              label: "",
-              value: `__pad__start_${i}`,
-            }));
-            const padEnd = Array.from({ length: padCount }, (_, i) => ({
-              label: "",
-              value: `__pad__end_${i}`,
-            }));
-            const visibleItems = 20;
-            const visibleCount = 15;
-            const optionItemHeight = 44;
-            const wheelSize = visibleItems * optionItemHeight;
-            const guestOptions = [
-              ...padStart,
-              ...sortedGuests.map((guest) => ({
-                label: `s${guest.guest_number || ''}`,
-                value: guest.id,
-              })),
-              ...padEnd,
-            ];
-
             return (
               <div className="flex items-center gap-2 py-1">
                 <div className="flex-1 min-w-0">
                   <div className="relative rounded-2xl border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 px-2 py-1.5">
                     {sortedGuests.length > 0 ? (
-                      <div
-                        className="relative flex items-center justify-center overflow-hidden"
-                        style={{ height: `${optionItemHeight}px` }}
-                      >
+                      <div className="relative">
+                        <div className="pointer-events-none absolute inset-y-2 left-1/2 w-16 -translate-x-1/2 rounded-full border border-amber-300/60 bg-amber-100/30 dark:border-amber-500/40 dark:bg-amber-900/15" />
                         <div
-                          className="pointer-events-none absolute inset-y-0 left-1/2 -translate-x-1/2 rounded-full border border-amber-300/60 bg-amber-100/30 dark:border-amber-500/40 dark:bg-amber-900/15"
-                          style={{ width: `${optionItemHeight}px` }}
-                        />
-                        <div
-                          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 -rotate-90"
-                          style={{ height: `${wheelSize}px`, width: `${wheelSize}px` }}
+                          ref={guestScrollRef}
+                          className="flex items-center gap-2 overflow-x-auto scrollbar-hide snap-x snap-mandatory py-1"
+                          style={{ paddingLeft: guestSidePadding, paddingRight: guestSidePadding }}
                         >
-                          <WheelPickerWrapper
-                            className="w-full h-full border-none bg-transparent px-0 shadow-none [&_[data-rwp]]:!h-[var(--guest-wheel-height)] [&_[data-rwp-options]]:opacity-60"
-                            style={{ "--guest-wheel-height": `${wheelSize}px` }}
-                          >
-                            <WheelPicker
-                              options={guestOptions}
-                              value={currentGuest?.id}
-                              onValueChange={(val) => {
-                                if (typeof val === "string" && val.startsWith("__pad__start")) {
-                                  if (sortedGuests[0]) setActiveGuestId(sortedGuests[0].id);
-                                  return;
-                                }
-                                if (typeof val === "string" && val.startsWith("__pad__end")) {
-                                  if (sortedGuests[sortedGuests.length - 1]) {
-                                    setActiveGuestId(sortedGuests[sortedGuests.length - 1].id);
-                                  }
-                                  return;
-                                }
-                                setActiveGuestId(val);
-                              }}
-                              visibleCount={visibleCount}
-                              infinite={false}
-                              optionItemHeight={optionItemHeight}
-                              classNames={{
-                                optionItem: "rotate-90 text-base text-stone-500 dark:text-stone-400",
-                                highlightWrapper: "bg-transparent",
-                                highlightItem: "rotate-90 text-lg font-semibold text-stone-900 dark:text-stone-100",
-                              }}
-                            />
-                          </WheelPickerWrapper>
+                          {sortedGuests.map((guest, index) => {
+                            const isActive = guest.id === activeGuestId;
+                            return (
+                              <button
+                                key={guest.id}
+                                ref={index === 0 ? guestItemRef : null}
+                                type="button"
+                                data-guest-pill="true"
+                                data-guest-id={guest.id}
+                                className={cn(
+                                  "shrink-0 min-w-[56px] px-3 py-1.5 rounded-full border text-sm snap-center transition-colors",
+                                  isActive
+                                    ? "bg-amber-100 text-amber-900 border-amber-200 dark:bg-amber-900/70 dark:text-amber-100 dark:border-amber-500/60"
+                                    : "bg-stone-100 border-stone-200 text-stone-600 dark:bg-stone-800 dark:border-stone-700 dark:text-stone-300"
+                                )}
+                                onClick={() => setActiveGuestId(guest.id)}
+                                aria-label={`Select guest s${guest.guest_number || ''}`}
+                              >
+                                s{guest.guest_number || ''}
+                              </button>
+                            );
+                          })}
                         </div>
                       </div>
                     ) : (
