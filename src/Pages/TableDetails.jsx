@@ -403,7 +403,8 @@ export default function TableDetails() {
                     {sortedGuests.length > 0 ? (
                       <div className="relative">
                         <div className="pointer-events-none absolute inset-y-0 left-1/2 w-16 -translate-x-1/2 rounded-full border border-amber-300/60 bg-amber-100/20 dark:border-amber-500/40 dark:bg-amber-900/10" />
-                        <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide px-6 snap-x snap-mandatory">
+                        <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide px-6 snap-x snap-mandatory scroll-px-6">
+                          <span className="shrink-0 w-8" aria-hidden="true" />
                         {sortedGuests.map((guest) => {
                           const isActive = guest.id === activeGuestId;
                           return (
@@ -423,6 +424,7 @@ export default function TableDetails() {
                             </button>
                           );
                         })}
+                          <span className="shrink-0 w-8" aria-hidden="true" />
                         </div>
                       </div>
                     ) : (
