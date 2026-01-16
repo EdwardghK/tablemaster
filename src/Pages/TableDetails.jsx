@@ -406,8 +406,8 @@ export default function TableDetails() {
               label: "",
               value: `__pad__end_${i}`,
             }));
-            const visibleItems = 5;
-            const visibleCount = 9;
+            const visibleItems = 20;
+            const visibleCount = 15;
             const optionItemHeight = 44;
             const wheelSize = visibleItems * optionItemHeight;
             const guestOptions = [
@@ -433,11 +433,11 @@ export default function TableDetails() {
                           style={{ width: `${optionItemHeight}px` }}
                         />
                         <div
-                          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 -rotate-90 -scale-x-100"
+                          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 -rotate-90"
                           style={{ height: `${wheelSize}px`, width: `${wheelSize}px` }}
                         >
                           <WheelPickerWrapper
-                            className="w-full h-full border-none bg-transparent px-0 shadow-none [&_[data-rwp]]:!h-[var(--guest-wheel-height)] [&_[data-rwp]]:[-webkit-mask-image:none] [&_[data-rwp]]:[mask-image:none] [&_[data-rwp-highlight-list]]:hidden"
+                            className="w-full h-full border-none bg-transparent px-0 shadow-none [&_[data-rwp]]:!h-[var(--guest-wheel-height)] [&_[data-rwp]]:[-webkit-mask-image:none] [&_[data-rwp]]:[mask-image:none] [&_[data-rwp-options]]:hidden"
                             style={{ "--guest-wheel-height": `${wheelSize}px` }}
                           >
                             <WheelPicker
@@ -460,7 +460,7 @@ export default function TableDetails() {
                               infinite={false}
                               optionItemHeight={optionItemHeight}
                               classNames={{
-                                optionItem: "rotate-90 -scale-x-100 text-base text-stone-500 dark:text-stone-400",
+                                optionItem: "rotate-90 text-base text-stone-500 dark:text-stone-400",
                                 highlightWrapper: "bg-transparent",
                                 highlightItem: "rotate-90 text-lg font-semibold text-stone-900 dark:text-stone-100",
                               }}
