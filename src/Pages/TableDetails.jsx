@@ -406,6 +406,9 @@ export default function TableDetails() {
               label: "",
               value: `__pad__end_${i}`,
             }));
+            const visibleCount = 5;
+            const optionItemHeight = 36;
+            const wheelSize = visibleCount * optionItemHeight;
             const guestOptions = [
               ...padStart,
               ...sortedGuests.map((guest) => ({
@@ -420,10 +423,10 @@ export default function TableDetails() {
                 <div className="flex-1 min-w-0">
                   <div className="relative rounded-2xl border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 px-2 py-1.5">
                     {sortedGuests.length > 0 ? (
-                      <div className="relative h-16 overflow-hidden">
-                        <div className="pointer-events-none absolute inset-y-2 left-1/2 w-12 -translate-x-1/2 rounded-full border border-amber-300/60 bg-amber-100/30 dark:border-amber-500/40 dark:bg-amber-900/15" />
-                        <div className="-rotate-90 w-full" style={{ height: "180px" }}>
-                          <WheelPickerWrapper className="w-full border-none bg-transparent px-0 shadow-none">
+                      <div className="relative h-16 overflow-hidden flex items-center justify-center">
+                        <div className="pointer-events-none absolute inset-y-2 left-1/2 w-[36px] -translate-x-1/2 rounded-full border border-amber-300/60 bg-amber-100/30 dark:border-amber-500/40 dark:bg-amber-900/15" />
+                        <div className="-rotate-90" style={{ height: `${wheelSize}px`, width: `${wheelSize}px` }}>
+                          <WheelPickerWrapper className="w-full h-full border-none bg-transparent px-0 shadow-none">
                             <WheelPicker
                               options={guestOptions}
                               value={currentGuest?.id}
@@ -440,11 +443,11 @@ export default function TableDetails() {
                                 }
                                 setActiveGuestId(val);
                               }}
-                              visibleCount={5}
+                              visibleCount={visibleCount}
                               infinite={false}
-                              optionItemHeight={36}
+                              optionItemHeight={optionItemHeight}
                               classNames={{
-                                optionItem: "rotate-90 text-base text-stone-500 dark:text-stone-400",
+                                optionItem: "rotate-90 text-base text-stone-500 dark:text-stone-400 min-w-[48px]",
                                 highlightWrapper: "bg-transparent",
                                 highlightItem: "rotate-90 font-semibold",
                               }}
