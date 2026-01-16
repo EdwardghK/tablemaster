@@ -424,14 +424,20 @@ export default function TableDetails() {
                 <div className="flex-1 min-w-0">
                   <div className="relative rounded-2xl border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 px-2 py-1.5">
                     {sortedGuests.length > 0 ? (
-                      <div className="relative flex items-center justify-center" style={{ height: `${optionItemHeight}px` }}>
+                      <div
+                        className="relative flex items-center justify-center overflow-hidden"
+                        style={{ height: `${optionItemHeight}px` }}
+                      >
                         <div
                           className="pointer-events-none absolute inset-y-0 left-1/2 -translate-x-1/2 rounded-full border border-amber-300/60 bg-amber-100/30 dark:border-amber-500/40 dark:bg-amber-900/15"
                           style={{ width: `${optionItemHeight}px` }}
                         />
-                        <div className="-rotate-90" style={{ height: `${wheelSize}px`, width: `${wheelSize}px` }}>
+                        <div
+                          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 -rotate-90 -scale-x-100"
+                          style={{ height: `${wheelSize}px`, width: `${wheelSize}px` }}
+                        >
                           <WheelPickerWrapper
-                            className="w-full h-full border-none bg-transparent px-0 shadow-none [&_[data-rwp]]:!h-[var(--guest-wheel-height)] [&_[data-rwp]]:[-webkit-mask-image:none] [&_[data-rwp]]:[mask-image:none]"
+                            className="w-full h-full border-none bg-transparent px-0 shadow-none [&_[data-rwp]]:!h-[var(--guest-wheel-height)] [&_[data-rwp]]:[-webkit-mask-image:none] [&_[data-rwp]]:[mask-image:none] [&_[data-rwp-highlight-list]]:hidden"
                             style={{ "--guest-wheel-height": `${wheelSize}px` }}
                           >
                             <WheelPicker
@@ -454,7 +460,7 @@ export default function TableDetails() {
                               infinite={false}
                               optionItemHeight={optionItemHeight}
                               classNames={{
-                                optionItem: "rotate-90 text-base text-stone-500 dark:text-stone-400",
+                                optionItem: "rotate-90 -scale-x-100 text-base text-stone-500 dark:text-stone-400",
                                 highlightWrapper: "bg-transparent",
                                 highlightItem: "rotate-90 text-lg font-semibold text-stone-900 dark:text-stone-100",
                               }}
