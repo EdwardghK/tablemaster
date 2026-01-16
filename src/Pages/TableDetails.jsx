@@ -1,13 +1,12 @@
-import React, { useState, useEffect, useContext, useRef } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { cn } from '@/utils';
 import BottomNav from '@/components/common/BottomNav';
-import GuestTab from '@/components/common/tables/GuestTab';
 import CategoryTabs from '@/components/menu/CategoryTabs';
 import MenuItemCard from '@/components/menu/MenuItemCard';
 import EditGuestModal from '@/components/modals/EditGuestModal';
 import EditTableModal from '@/components/modals/EditTableModal';
 import { Button } from '@/components/ui/Button';
-import { Settings, UserPlus, ShoppingCart, List, AlertTriangle, Trash2, Pencil, Plus } from 'lucide-react';
+import { Settings, UserPlus, ShoppingCart, List, AlertTriangle, Trash2, Pencil, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
 import DarkModeToggle from '@/components/common/DarkModeToggle';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select } from '@/components/ui/Select';
@@ -50,7 +49,6 @@ export default function TableDetails() {
   const [editTableModal, setEditTableModal] = useState(false);
   const [editOrderModal, setEditOrderModal] = useState({ open: false, item: null, notes: '', mods: [] });
   const courseOptions = ['Unassigned', 'Course 1', 'Course 2', 'Course 3', 'Course 4', 'Course 5'];
-  const touchStartX = useRef(null);
 
   // Load table info
   useEffect(() => {
@@ -385,35 +383,92 @@ export default function TableDetails() {
           </div>
         </div>
 
-        {/* Sticky guest tabs only */}
+        {/* Sticky guest picker */}
         <div className="w-full sticky top-[56px] z-40 px-4 bg-stone-50 dark:bg-stone-900 border-b border-stone-200 dark:border-stone-800 py-1">
-          <div className="flex items-center gap-2 py-1">
-            <div className="flex-1 flex gap-2 overflow-x-auto">
-              {guests.map((g) => {
-                const count = orderItems.filter(i => i.guest_id === g.id).reduce((s, it) => s + (it.quantity || 1), 0);
-                return (
-                  <GuestTab
-                    key={g.id}
-                    guest={g}
-                    isActive={g.id === activeGuestId}
-                    onClick={() => setActiveGuestId(g.id)}
-                    hasAllergens={(g.allergens?.length || g.custom_allergens?.length) > 0}
-                    onEdit={(guest) => setEditGuestModal({ open: true, guest })}
-                    orderCount={count}
-                  />
-                );
-              })}
-            </div>
-            <Button
-              type="button"
-              size="icon"
-              onClick={handleAddGuest}
-              className="shrink-0 rounded-full bg-amber-700 hover:bg-amber-800 text-white w-10 h-10"
-              aria-label="Add guest"
-            >
-              <Plus className="h-5 w-5" />
-            </Button>
-          </div>
+          {(() => {
+            const sortedGuests = [...guests].sort((a, b) => (a.guest_number || 0) - (b.guest_number || 0));
+            const currentIndex = sortedGuests.findIndex(g => g.id === activeGuestId);
+            const currentGuest = currentIndex >= 0 ? sortedGuests[currentIndex] : sortedGuests[0];
+            const currentCount = currentGuest
+              ? orderItems.filter(i => i.guest_id === currentGuest.id).reduce((s, it) => s + (it.quantity || 1), 0)
+              : 0;
+            const currentHasAllergens = currentGuest
+              ? (currentGuest.allergens?.length || currentGuest.custom_allergens?.length) > 0
+              : false;
+            const canGoPrev = currentIndex > 0;
+            const canGoNext = currentIndex >= 0 && currentIndex < sortedGuests.length - 1;
+
+            return (
+              <div className="flex items-center gap-2 py-1">
+                <div className="flex-1">
+                  <div className="flex items-center justify-between gap-2 rounded-2xl border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 px-2 py-1.5">
+                    <button
+                      type="button"
+                      className={cn(
+                        "w-10 h-10 rounded-full flex items-center justify-center text-stone-600 dark:text-stone-300",
+                        canGoPrev ? "hover:bg-stone-100 dark:hover:bg-stone-800" : "opacity-40 cursor-not-allowed"
+                      )}
+                      onClick={() => {
+                        if (!canGoPrev) return;
+                        setActiveGuestId(sortedGuests[currentIndex - 1]?.id);
+                      }}
+                      aria-label="Previous guest"
+                    >
+                      <ChevronLeft className="h-5 w-5" />
+                    </button>
+
+                    <button
+                      type="button"
+                      className="flex-1 min-w-0 px-2 py-1 rounded-xl text-left"
+                      onClick={() => currentGuest && setEditGuestModal({ open: true, guest: currentGuest })}
+                      aria-label="Edit guest"
+                    >
+                      {currentGuest ? (
+                        <div className="flex items-center justify-center gap-2">
+                          <span className="text-sm font-semibold text-stone-900 dark:text-stone-100">
+                            s{currentGuest.guest_number || ''}
+                          </span>
+                          <span className="text-xs text-stone-500 dark:text-stone-300">
+                            {currentCount} items
+                          </span>
+                          {currentHasAllergens && (
+                            <span className="inline-block w-2.5 h-2.5 rounded-full bg-red-500" aria-hidden="true" />
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-sm text-stone-500">No guests</span>
+                      )}
+                    </button>
+
+                    <button
+                      type="button"
+                      className={cn(
+                        "w-10 h-10 rounded-full flex items-center justify-center text-stone-600 dark:text-stone-300",
+                        canGoNext ? "hover:bg-stone-100 dark:hover:bg-stone-800" : "opacity-40 cursor-not-allowed"
+                      )}
+                      onClick={() => {
+                        if (!canGoNext) return;
+                        setActiveGuestId(sortedGuests[currentIndex + 1]?.id);
+                      }}
+                      aria-label="Next guest"
+                    >
+                      <ChevronRight className="h-5 w-5" />
+                    </button>
+                  </div>
+                </div>
+
+                <Button
+                  type="button"
+                  size="icon"
+                  onClick={handleAddGuest}
+                  className="shrink-0 rounded-full bg-amber-700 hover:bg-amber-800 text-white w-10 h-10"
+                  aria-label="Add guest"
+                >
+                  <Plus className="h-5 w-5" />
+                </Button>
+              </div>
+            );
+          })()}
         </div>
 
         {/* Menu */}
