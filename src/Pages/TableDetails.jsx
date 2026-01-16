@@ -408,12 +408,12 @@ export default function TableDetails() {
 
             return (
               <div className="flex items-center gap-2 py-1">
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   <div className="rounded-2xl border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 px-2 py-1.5">
                     {sortedGuests.length > 0 ? (
                       <div
                         ref={guestScrollRef}
-                        className="flex items-center gap-2 overflow-x-auto scrollbar-hide snap-x snap-mandatory px-2"
+                        className="flex items-center gap-2 overflow-x-auto scrollbar-hide snap-x snap-mandatory px-2 w-full min-w-0 max-w-full"
                       >
                         {sortedGuests.map((guest) => {
                           const isActive = guest.id === activeGuestId;
