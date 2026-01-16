@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useRef } from 'react';
 import { cn } from '@/utils';
 import BottomNav from '@/components/common/BottomNav';
 import CategoryTabs from '@/components/menu/CategoryTabs';
@@ -6,7 +6,7 @@ import MenuItemCard from '@/components/menu/MenuItemCard';
 import EditGuestModal from '@/components/modals/EditGuestModal';
 import EditTableModal from '@/components/modals/EditTableModal';
 import { Button } from '@/components/ui/Button';
-import { Settings, UserPlus, ShoppingCart, List, AlertTriangle, Trash2, Pencil, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Settings, UserPlus, ShoppingCart, List, AlertTriangle, Trash2, Pencil, Plus } from 'lucide-react';
 import DarkModeToggle from '@/components/common/DarkModeToggle';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select } from '@/components/ui/Select';
@@ -49,6 +49,16 @@ export default function TableDetails() {
   const [editTableModal, setEditTableModal] = useState(false);
   const [editOrderModal, setEditOrderModal] = useState({ open: false, item: null, notes: '', mods: [] });
   const courseOptions = ['Unassigned', 'Course 1', 'Course 2', 'Course 3', 'Course 4', 'Course 5'];
+  const guestScrollRef = useRef(null);
+  const guestItemRefs = useRef({});
+
+  useEffect(() => {
+    if (!activeGuestId) return;
+    const node = guestItemRefs.current[activeGuestId];
+    if (node && guestScrollRef.current) {
+      node.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    }
+  }, [activeGuestId, guests.length]);
 
   // Load table info
   useEffect(() => {
@@ -395,104 +405,57 @@ export default function TableDetails() {
             const currentHasAllergens = currentGuest
               ? (currentGuest.allergens?.length || currentGuest.custom_allergens?.length) > 0
               : false;
-            const canGoPrev = currentIndex > 0;
-            const canGoNext = currentIndex >= 0 && currentIndex < sortedGuests.length - 1;
 
             return (
               <div className="flex items-center gap-2 py-1">
                 <div className="flex-1">
-                  <div className="flex items-center justify-between gap-2 rounded-2xl border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 px-2 py-1.5">
-                    <button
-                      type="button"
-                      className={cn(
-                        "w-10 h-10 rounded-full flex items-center justify-center text-stone-600 dark:text-stone-300",
-                        canGoPrev ? "hover:bg-stone-100 dark:hover:bg-stone-800" : "opacity-40 cursor-not-allowed"
-                      )}
-                      onClick={() => {
-                        if (!canGoPrev) return;
-                        setActiveGuestId(sortedGuests[currentIndex - 1]?.id);
-                      }}
-                      aria-label="Previous guest"
-                    >
-                      <ChevronLeft className="h-5 w-5" />
-                    </button>
+                  <div className="rounded-2xl border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 px-2 py-1.5">
+                    {sortedGuests.length > 0 ? (
+                      <div
+                        ref={guestScrollRef}
+                        className="flex items-center gap-2 overflow-x-auto scrollbar-hide snap-x snap-mandatory px-2"
+                      >
+                        {sortedGuests.map((guest) => {
+                          const isActive = guest.id === activeGuestId;
+                          return (
+                            <button
+                              key={guest.id}
+                              ref={(el) => { guestItemRefs.current[guest.id] = el; }}
+                              type="button"
+                              className={cn(
+                                "snap-center shrink-0 px-4 py-1.5 rounded-full border text-sm transition-colors",
+                                isActive
+                                  ? "bg-amber-100 text-amber-900 border-amber-200 dark:bg-amber-900/70 dark:text-amber-100 dark:border-amber-500/60"
+                                  : "bg-stone-100 border-stone-200 text-stone-600 dark:bg-stone-800 dark:border-stone-700 dark:text-stone-300"
+                              )}
+                              onClick={() => setActiveGuestId(guest.id)}
+                              aria-label={`Select guest s${guest.guest_number || ''}`}
+                            >
+                              s{guest.guest_number || ''}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="text-sm text-stone-500 text-center py-1">No guests</div>
+                    )}
 
-                    <div className="flex-1 min-w-0 px-2">
-                      {currentGuest ? (
-                        <div className="flex items-center justify-center gap-2">
-                          <button
-                            type="button"
-                            className={cn(
-                              "px-2 py-1 text-xs rounded-full border",
-                              canGoPrev
-                                ? "bg-stone-100 border-stone-200 text-stone-600 dark:bg-stone-800 dark:border-stone-700 dark:text-stone-300"
-                                : "bg-stone-100/50 border-stone-200/50 text-stone-400 dark:bg-stone-800/40 dark:border-stone-700/40 dark:text-stone-500"
-                            )}
-                            onClick={() => {
-                              if (!canGoPrev) return;
-                              setActiveGuestId(sortedGuests[currentIndex - 1]?.id);
-                            }}
-                            disabled={!canGoPrev}
-                            aria-label="Select previous guest"
-                          >
-                            s{sortedGuests[currentIndex - 1]?.guest_number || ''}
-                          </button>
-                          <button
-                            type="button"
-                            className="px-3 py-1 text-sm rounded-full bg-amber-100 text-amber-900 border border-amber-200 dark:bg-amber-900/70 dark:text-amber-100 dark:border-amber-500/60"
-                            onClick={() => setEditGuestModal({ open: true, guest: currentGuest })}
-                            aria-label="Edit current guest"
-                          >
-                            s{currentGuest.guest_number || ''}
-                          </button>
-                          <button
-                            type="button"
-                            className={cn(
-                              "px-2 py-1 text-xs rounded-full border",
-                              canGoNext
-                                ? "bg-stone-100 border-stone-200 text-stone-600 dark:bg-stone-800 dark:border-stone-700 dark:text-stone-300"
-                                : "bg-stone-100/50 border-stone-200/50 text-stone-400 dark:bg-stone-800/40 dark:border-stone-700/40 dark:text-stone-500"
-                            )}
-                            onClick={() => {
-                              if (!canGoNext) return;
-                              setActiveGuestId(sortedGuests[currentIndex + 1]?.id);
-                            }}
-                            disabled={!canGoNext}
-                            aria-label="Select next guest"
-                          >
-                            s{sortedGuests[currentIndex + 1]?.guest_number || ''}
-                          </button>
-                        </div>
-                      ) : (
-                        <span className="text-sm text-stone-500">No guests</span>
-                      )}
-                      {currentGuest ? (
-                        <div className="mt-1 flex items-center justify-center gap-2 text-xs text-stone-500 dark:text-stone-300">
-                          <span>{currentCount} items</span>
-                          {currentHasAllergens && (
-                            <span className="inline-flex items-center gap-1 text-red-500">
-                              <span className="inline-block w-2 h-2 rounded-full bg-red-500" aria-hidden="true" />
-                              Allergens
-                            </span>
-                          )}
-                        </div>
-                      ) : null}
-                    </div>
-
-                    <button
-                      type="button"
-                      className={cn(
-                        "w-10 h-10 rounded-full flex items-center justify-center text-stone-600 dark:text-stone-300",
-                        canGoNext ? "hover:bg-stone-100 dark:hover:bg-stone-800" : "opacity-40 cursor-not-allowed"
-                      )}
-                      onClick={() => {
-                        if (!canGoNext) return;
-                        setActiveGuestId(sortedGuests[currentIndex + 1]?.id);
-                      }}
-                      aria-label="Next guest"
-                    >
-                      <ChevronRight className="h-5 w-5" />
-                    </button>
+                    {currentGuest ? (
+                      <button
+                        type="button"
+                        className="mt-1 w-full flex items-center justify-center gap-2 text-xs text-stone-500 dark:text-stone-300"
+                        onClick={() => setEditGuestModal({ open: true, guest: currentGuest })}
+                        aria-label="Edit current guest"
+                      >
+                        <span>{currentCount} items</span>
+                        {currentHasAllergens && (
+                          <span className="inline-flex items-center gap-1 text-red-500">
+                            <span className="inline-block w-2 h-2 rounded-full bg-red-500" aria-hidden="true" />
+                            Allergens
+                          </span>
+                        )}
+                      </button>
+                    ) : null}
                   </div>
                 </div>
 
