@@ -69,7 +69,13 @@ export default function Tables() {
       } else {
         savedTable = await TableStorage.createTable(payload);
       }
-      setTables(await TableStorage.getAllTables());
+      setTables((prev) => {
+        const exists = prev.some((t) => t.id === savedTable.id);
+        if (exists) {
+          return prev.map((t) => (t.id === savedTable.id ? savedTable : t));
+        }
+        return [...prev, savedTable];
+      });
       return savedTable;
     } catch (err) {
       console.error('Failed to save table:', err);
@@ -97,7 +103,7 @@ export default function Tables() {
       await TableStorage.deleteTable(table.id);
       setGuests((prev) => prev.filter((g) => g.table_id !== table.id));
       setOrderItems((prev) => prev.filter((o) => o.table_id !== table.id));
-      setTables(await TableStorage.getAllTables());
+      setTables((prev) => prev.filter((t) => t.id !== table.id));
     } catch (err) {
       console.error('Failed to delete table:', err);
       window.alert(err?.message || 'Could not delete table');
