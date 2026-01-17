@@ -4,24 +4,6 @@ async function requireUser() {
   let { data } = await supabase.auth.getUser();
   if (data?.user) return data.user;
 
-  try {
-    const { data: anonData } = await supabase.auth.signInAnonymously?.();
-    if (anonData?.session?.user) {
-      const { data: refreshed } = await supabase.auth.getUser();
-      if (refreshed?.user) return refreshed.user;
-    }
-  } catch (_) {}
-
-  const fallbackEmail = import.meta.env.VITE_DEMO_USER_EMAIL;
-  const fallbackPassword = import.meta.env.VITE_DEMO_USER_PASSWORD;
-  if (fallbackEmail && fallbackPassword) {
-    const { data: pwData } = await supabase.auth.signInWithPassword({
-      email: fallbackEmail,
-      password: fallbackPassword,
-    });
-    if (pwData?.user) return pwData.user;
-  }
-
   ({ data } = await supabase.auth.getUser());
   if (data?.user) return data.user;
 
