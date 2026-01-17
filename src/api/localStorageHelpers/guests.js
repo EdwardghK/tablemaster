@@ -1,6 +1,9 @@
 import { supabase } from "@/supabase";
 
 async function requireUser() {
+  const { data: sessionData } = await supabase.auth.getSession();
+  if (sessionData?.session?.user) return sessionData.session.user;
+
   let { data } = await supabase.auth.getUser();
   if (data?.user) return data.user;
 

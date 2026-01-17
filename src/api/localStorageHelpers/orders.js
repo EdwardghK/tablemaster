@@ -2,6 +2,9 @@ import { supabase } from "@/supabase";
 
 // Ensure we have a user session; fall back to anonymous or shared creds.
 async function requireUser() {
+  const { data: sessionData } = await supabase.auth.getSession();
+  if (sessionData?.session?.user) return sessionData.session.user;
+
   // Existing session
   let { data } = await supabase.auth.getUser();
   if (data?.user) return data.user;
