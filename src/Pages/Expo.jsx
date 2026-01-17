@@ -14,16 +14,34 @@ export default function Expo() {
   const [orderItems, setOrderItems] = useState([]);
 
   useEffect(() => {
-    (async () => {
+    let mounted = true;
+    const load = async () => {
       const [t, g, o] = await Promise.all([
         TableStorageShared.getAllTables(),
         GuestStorageShared.getAllGuests(),
         OrderStorageShared.getAllOrderItems(),
       ]);
+      if (!mounted) return;
       setTables(t);
       setGuests(g);
       setOrderItems(o);
-    })();
+    };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") load();
+    };
+
+    load();
+    const intervalId = setInterval(load, 5000);
+    window.addEventListener("focus", load);
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    return () => {
+      mounted = false;
+      clearInterval(intervalId);
+      window.removeEventListener("focus", load);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
   }, []);
 
   const getGuestCount = (tableId) =>
