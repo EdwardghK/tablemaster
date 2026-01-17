@@ -18,6 +18,7 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   if (request.method !== 'GET') return;
+  if (!request.url.startsWith('http')) return;
 
   // For navigation requests, serve cached index.html fallback
   if (request.mode === 'navigate') {
@@ -25,7 +26,9 @@ self.addEventListener('fetch', (event) => {
       fetch(request)
         .then((response) => {
           const copy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+          if (copy.ok) {
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+          }
           return response;
         })
         .catch(() => caches.match('/index.html'))
@@ -40,7 +43,9 @@ self.addEventListener('fetch', (event) => {
       return fetch(request)
         .then((response) => {
           const copy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+          if (copy.ok) {
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+          }
           return response;
         })
         .catch(() => cached);
