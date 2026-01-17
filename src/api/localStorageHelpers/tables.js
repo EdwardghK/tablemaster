@@ -30,6 +30,7 @@ async function requireUser() {
   // Final check
   ({ data, error } = await supabase.auth.getUser());
   if (data?.user) return data.user;
+
   throw new Error("Must be signed in");
 }
 

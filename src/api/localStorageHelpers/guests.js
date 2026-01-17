@@ -24,6 +24,7 @@ async function requireUser() {
 
   ({ data } = await supabase.auth.getUser());
   if (data?.user) return data.user;
+
   throw new Error("Must be signed in");
 }
 
