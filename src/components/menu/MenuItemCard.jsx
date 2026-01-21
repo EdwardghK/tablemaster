@@ -178,9 +178,10 @@ export default function MenuItemCard({
                 {formatAging(item) ? (
                   <p className="text-xs text-stone-500 dark:text-stone-300 mt-1">{formatAging(item)}</p>
                 ) : null}
+                {item.description ? (
+                  <p className="text-sm text-stone-500 dark:text-stone-300 mt-1 line-clamp-2">{item.description}</p>
+                ) : null}
               </>
-            ) : item.description ? (
-              <p className="text-sm text-stone-500 dark:text-stone-300 mt-1 line-clamp-2">{item.description}</p>
             ) : null}
             
             {showAllergenBadges && item.allergens?.length > 0 && (
