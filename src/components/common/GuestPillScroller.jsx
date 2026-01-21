@@ -54,8 +54,18 @@ export default function GuestPillScroller({
   const snapToNearest = React.useCallback(() => {
     const container = containerRef.current;
     if (!container) return;
-    const rawIndex = container.scrollLeft / ITEM_WIDTH;
-    const nearestIndex = Math.max(0, Math.min(itemsWithKeys.length - 1, Math.round(rawIndex)));
+    const maxIndex = itemsWithKeys.length - 1;
+    const maxScroll = Math.max(0, maxIndex * ITEM_WIDTH);
+    const currentScroll = container.scrollLeft;
+    let nearestIndex;
+    if (currentScroll <= ITEM_WIDTH / 2) {
+      nearestIndex = 0;
+    } else if (currentScroll >= maxScroll - ITEM_WIDTH / 2) {
+      nearestIndex = maxIndex;
+    } else {
+      const rawIndex = currentScroll / ITEM_WIDTH;
+      nearestIndex = Math.max(0, Math.min(maxIndex, Math.round(rawIndex)));
+    }
     const selected = itemsWithKeys[nearestIndex];
     if (selected && `${selected.id}` !== `${value}`) {
       onChange?.(selected.id, { via: 'programmatic' });
@@ -231,7 +241,7 @@ export default function GuestPillScroller({
         aria-activedescendant={`guest-pill-${value}`}
         tabIndex={disabled ? -1 : 0}
         className={cn(
-          'flex items-center gap-2 overflow-x-auto overflow-y-hidden scrollbar-hide',
+          'flex items-center gap-0 overflow-x-auto overflow-y-hidden scrollbar-hide',
           'cursor-grab active:cursor-grabbing',
           disabled && 'cursor-not-allowed'
         )}
