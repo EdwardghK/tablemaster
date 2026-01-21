@@ -206,6 +206,14 @@ export default function GuestPillScroller({
       style={{ height: 64 }}
     >
       <div
+        className="pointer-events-none absolute left-0 top-0 h-full w-10 bg-gradient-to-r from-white to-transparent dark:from-stone-900"
+        aria-hidden="true"
+      />
+      <div
+        className="pointer-events-none absolute right-0 top-0 h-full w-10 bg-gradient-to-l from-white to-transparent dark:from-stone-900"
+        aria-hidden="true"
+      />
+      <div
         ref={containerRef}
         role="listbox"
         aria-label={ariaLabel}
@@ -239,10 +247,10 @@ export default function GuestPillScroller({
               role="option"
               aria-selected={isSelected}
               className={cn(
-                'flex-shrink-0 min-w-[56px] px-3 py-1.5 rounded-full border text-sm snap-center transition-colors',
+                'flex-shrink-0 min-w-[56px] px-3 py-1.5 rounded-full border text-sm snap-center transition-all',
                 isSelected
-                  ? 'bg-amber-100 text-amber-900 border-amber-200 dark:bg-amber-900/70 dark:text-amber-100 dark:border-amber-500/60'
-                  : 'bg-stone-100 border-stone-200 text-stone-600 dark:bg-stone-800 dark:border-stone-700 dark:text-stone-300'
+                  ? 'bg-amber-100 text-amber-900 border-amber-200 dark:bg-amber-900/70 dark:text-amber-100 dark:border-amber-500/60 scale-110 opacity-100'
+                  : 'bg-stone-100 border-stone-200 text-stone-600 dark:bg-stone-800 dark:border-stone-700 dark:text-stone-300 scale-90 opacity-50'
               )}
               style={{ width: ITEM_WIDTH }}
               onClick={() => handleItemClick(item.id)}

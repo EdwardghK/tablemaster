@@ -13,7 +13,7 @@ import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
 import { Label } from '@/components/ui/Label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/Dialog';
-import { WheelPicker, WheelPickerWrapper } from '@/components/wheel-picker';
+import GuestPillScroller from '@/components/common/GuestPillScroller';
 import { toast } from 'sonner';
 import { TableStorage } from '@/api/localStorageHelpers/tables';
 import { GuestStorage } from '@/api/localStorageHelpers/guests';
@@ -405,19 +405,15 @@ export default function TableDetails() {
                 <div className="flex-1 min-w-0">
                   <div className="relative rounded-2xl border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 px-2 py-1.5">
                     {sortedGuests.length > 0 ? (
-                      <WheelPickerWrapper className="relative wheel-horizontal">
-                        <WheelPicker
-                          value={activeGuestId || sortedGuests[0]?.id}
-                          onValueChange={(guestId) => setActiveGuestId(guestId)}
-                          options={sortedGuests.map((guest) => ({
-                            value: guest.id,
-                            label: `s${guest.guest_number || ''}`,
-                            textValue: `s${guest.guest_number || ''}`,
-                          }))}
-                          visibleCount={8}
-                          optionItemHeight={36}
-                        />
-                      </WheelPickerWrapper>
+                      <GuestPillScroller
+                        items={sortedGuests.map((guest) => ({
+                          id: guest.id,
+                          label: `s${guest.guest_number || ''}`,
+                        }))}
+                        value={activeGuestId}
+                        onChange={(guestId) => setActiveGuestId(guestId)}
+                        visibleCount={5}
+                      />
                     ) : (
                       <div className="text-sm text-stone-500 text-center py-1">No guests</div>
                     )}
