@@ -21,3 +21,61 @@ button, input, select, textarea {
     font-size: 15px;
   }
 }
+
+/* ===== iOS-style horizontal wheel ===== */
+.ios-wheel-option {
+  transition:
+    transform 180ms ease,
+    opacity 180ms ease,
+    color 180ms ease;
+  transform: scale(0.85);
+  opacity: 0.4;
+  font-weight: 500;
+}
+
+.ios-wheel-option[data-rwp-highlighted="true"] {
+  transform: scale(1.15);
+  opacity: 1;
+  font-weight: 600;
+  color: inherit;
+}
+
+.ios-wheel-option:not([data-rwp-highlighted="true"]) {
+  pointer-events: auto;
+}
+
+.ios-wheel-highlight {
+  border-radius: 10px;
+  backdrop-filter: blur(6px);
+  transition: background-color 200ms ease;
+}
+
+[data-rwp-wrapper] {
+  perspective: 1000px;
+  position: relative;
+}
+
+.ios-wheel-option {
+  transform-origin: center;
+}
+
+[data-rwp-wrapper]::before,
+[data-rwp-wrapper]::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 40px;
+  pointer-events: none;
+  z-index: 10;
+}
+
+[data-rwp-wrapper]::before {
+  left: 0;
+  background: linear-gradient(to right, var(--background, white), transparent);
+}
+
+[data-rwp-wrapper]::after {
+  right: 0;
+  background: linear-gradient(to left, var(--background, white), transparent);
+}
