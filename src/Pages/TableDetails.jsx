@@ -17,10 +17,11 @@ import GuestPillScroller from '@/components/common/GuestPillScroller';
 import { toast } from 'sonner';
 import { TableStorage } from '@/api/localStorageHelpers/tables';
 import { GuestStorage } from '@/api/localStorageHelpers/guests';
+import { GuestStorageShared } from '@/api/localStorageHelpers/guests.shared';
 import { MenuStorage } from '@/api/localStorageHelpers/menu';
 import { OrderStorage } from '@/api/localStorageHelpers/orders';
+import { OrderStorageShared } from '@/api/localStorageHelpers/orders.shared';
 import { AppContext } from '@/context/AppContext';
-import { ChangeRequests } from '@/api/changeRequests';
 
 export default function TableDetails() {
   const urlParams = new URLSearchParams(window.location.search);
@@ -28,8 +29,7 @@ export default function TableDetails() {
 
   const {
     menuItems: ctxMenuItems,
-    requiresApproval,
-    user,
+    isAdmin,
   } = useContext(AppContext);
 
   const [table, setTable] = useState(null);
@@ -56,7 +56,9 @@ export default function TableDetails() {
     if (!tableId) return;
     (async () => {
       try {
-        const primary = await TableStorage.getTable(tableId);
+        const primary = isAdmin
+          ? await TableStorage.getTableShared(tableId)
+          : await TableStorage.getTable(tableId);
         setTable(primary);
         setLoadError('');
       } catch (err) {
@@ -65,17 +67,19 @@ export default function TableDetails() {
         setLoadError('Table not found or you do not have access.');
       }
     })();
-  }, [tableId]);
+  }, [tableId, isAdmin]);
 
   // Load guests
   useEffect(() => {
     if (!tableId) return;
     (async () => {
-      const gs = await GuestStorage.getGuests(tableId);
+      const gs = isAdmin
+        ? await GuestStorageShared.getGuests(tableId)
+        : await GuestStorage.getGuests(tableId);
       setGuests(gs);
       if (gs.length > 0 && !activeGuestId) setActiveGuestId(gs[0].id);
     })();
-  }, [tableId]);
+  }, [tableId, isAdmin]);
 
   // Load menu items (initial) and sync with context updates
   useEffect(() => {
@@ -124,10 +128,12 @@ export default function TableDetails() {
   useEffect(() => {
     if (!tableId) return;
     (async () => {
-      const items = await OrderStorage.getOrderItemsByTable(tableId);
+      const items = isAdmin
+        ? await OrderStorageShared.getOrderItemsByTable(tableId)
+        : await OrderStorage.getOrderItemsByTable(tableId);
       setOrderItems(items);
     })();
-  }, [tableId]);
+  }, [tableId, isAdmin]);
 
   useEffect(() => {
     if (activeCategory !== 'steaks' && steakOriginFilter !== 'all') {
@@ -236,21 +242,13 @@ export default function TableDetails() {
   };
 
   const handleSaveTable = async (tableData) => {
-    if (requiresApproval) {
-      const before = table;
-      await ChangeRequests.submit({
-        user,
-        entityType: 'table',
-        entityId: tableData.id,
-        action: 'update',
-        beforeData: before,
-        afterData: tableData,
-      });
-      toast.success('Changes submitted for approval. They will apply after admin review.');
-    } else {
-      await TableStorage.updateTable(tableData.id, tableData);
-      setTable(await TableStorage.getTable(tableData.id));
+    if (isAdmin) {
+      await TableStorage.updateTableShared(tableData.id, tableData);
+      setTable(await TableStorage.getTableShared(tableData.id));
+      return;
     }
+    await TableStorage.updateTable(tableData.id, tableData);
+    setTable(await TableStorage.getTable(tableData.id));
   };
 
   const handleAddToOrder = async (itemData) => {
@@ -308,7 +306,11 @@ export default function TableDetails() {
     if (!confirmed) return;
 
     try {
-      await TableStorage.deleteTable(table.id);
+      if (isAdmin) {
+        await TableStorage.deleteTableShared(table.id);
+      } else {
+        await TableStorage.deleteTable(table.id);
+      }
       toast.success('Table deleted');
       window.history.back();
       setEditTableModal(false);

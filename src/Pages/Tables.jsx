@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import Header from '@/components/common/Header';
 import BottomNav from '@/components/common/BottomNav';
 import TableCard from '@/components/common/tables/TableCard.jsx';
@@ -10,8 +10,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { TableStorage } from '@/api/localStorageHelpers/tables';
 import { GuestStorage } from '@/api/localStorageHelpers/guests';
 import { OrderStorage } from '@/api/localStorageHelpers/orders';
+import { GuestStorageShared } from '@/api/localStorageHelpers/guests.shared';
+import { OrderStorageShared } from '@/api/localStorageHelpers/orders.shared';
+import { AppContext } from '@/context/AppContext';
+import { toast } from 'sonner';
 
 export default function Tables() {
+  const { isAdmin } = useContext(AppContext);
   const [searchQuery, setSearchQuery] = useState('');
   const [editModal, setEditModal] = useState({ open: false, table: null });
   const [tables, setTables] = useState([]);
@@ -25,9 +30,9 @@ export default function Tables() {
       try {
         setLoading(true);
         const [t, g, o] = await Promise.all([
-          TableStorage.getAllTables(),
-          GuestStorage.getAllGuests(),
-          OrderStorage.getAllOrderItems(),
+          isAdmin ? TableStorage.getAllTablesShared() : TableStorage.getAllTables(),
+          isAdmin ? GuestStorageShared.getAllGuestsShared() : GuestStorage.getAllGuests(),
+          isAdmin ? OrderStorageShared.getAllOrderItems() : OrderStorage.getAllOrderItems(),
         ]);
         setTables(t);
         setGuests(g);
@@ -37,7 +42,7 @@ export default function Tables() {
       }
     };
     load();
-  }, []);
+  }, [isAdmin]);
 
   const filteredTables = tables.filter(table => {
     const matchesSearch = table.table_number?.toString().toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -63,11 +68,18 @@ export default function Tables() {
         guest_count: Number.isFinite(Number(tableData.guest_count)) ? Number(tableData.guest_count) : 0,
         status: tableData.status || 'available',
       };
+      const normalizedPayload = {
+        ...payload,
+        table_number: payload.table_number?.toString().trim(),
+      };
+
       let savedTable;
-      if (payload.id) {
-        savedTable = await TableStorage.updateTable(payload.id, payload);
+      if (normalizedPayload.id) {
+        savedTable = isAdmin
+          ? await TableStorage.updateTableShared(normalizedPayload.id, normalizedPayload)
+          : await TableStorage.updateTable(normalizedPayload.id, normalizedPayload);
       } else {
-        savedTable = await TableStorage.createTable(payload);
+        savedTable = await TableStorage.createTable(normalizedPayload);
       }
       setTables((prev) => {
         const exists = prev.some((t) => t.id === savedTable.id);
@@ -79,12 +91,13 @@ export default function Tables() {
       return savedTable;
     } catch (err) {
       console.error('Failed to save table:', err);
-      window.alert(err?.message || 'Could not save table');
+      toast.error(err?.message || 'Could not save table');
       throw err;
     }
   };
 
   const handleCreateGuests = async (table, guestCount) => {
+    if (!table?.id) return;
     const tasks = [];
     for (let i = 1; i <= guestCount; i++) {
       tasks.push(GuestStorage.createGuest({
@@ -100,13 +113,18 @@ export default function Tables() {
     const confirmed = window.confirm(`Delete table ${table.table_number || ''}?`);
     if (!confirmed) return;
     try {
-      await TableStorage.deleteTable(table.id);
+      if (isAdmin) {
+        await TableStorage.deleteTableShared(table.id);
+      } else {
+        await TableStorage.deleteTable(table.id);
+      }
       setGuests((prev) => prev.filter((g) => g.table_id !== table.id));
       setOrderItems((prev) => prev.filter((o) => o.table_id !== table.id));
       setTables((prev) => prev.filter((t) => t.id !== table.id));
+      toast.success('Table deleted');
     } catch (err) {
       console.error('Failed to delete table:', err);
-      window.alert(err?.message || 'Could not delete table');
+      toast.error(err?.message || 'Could not delete table');
     }
   };
 

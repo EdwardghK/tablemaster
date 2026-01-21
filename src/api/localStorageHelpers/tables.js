@@ -100,6 +100,18 @@ export const TableStorage = {
     return row;
   },
 
+  async updateTableShared(id, data) {
+    if (!id) throw new Error("Missing table id");
+    const { data: row, error } = await supabase
+      .from("tables")
+      .update(data)
+      .eq("id", id)
+      .select()
+      .single();
+    if (error) throw error;
+    return row;
+  },
+
   async deleteTable(id) {
     const user = await requireUser();
     const { error } = await supabase
@@ -107,6 +119,16 @@ export const TableStorage = {
       .delete()
       .eq("id", id)
       .eq("owner_id", user.id);
+    if (error) throw error;
+    return true;
+  },
+
+  async deleteTableShared(id) {
+    if (!id) throw new Error("Missing table id");
+    const { error } = await supabase
+      .from("tables")
+      .delete()
+      .eq("id", id);
     if (error) throw error;
     return true;
   },

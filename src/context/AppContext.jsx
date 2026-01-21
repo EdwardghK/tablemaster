@@ -24,7 +24,7 @@ export const AppProvider = ({ children }) => {
     role ||
     "user"
   ).toString().toLowerCase();
-  const isAdmin = resolvedRole === "admin";
+  const isAdmin = resolvedRole === "admin" || resolvedRole === "god";
   const requiresApproval = !isAdmin;
   // Everyone can perform edits; non-admin changes will be recorded for approval
   const canEdit = true;

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useContext } from 'react';
 import { cn } from '@/utils';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/Button';
 import { Plus, Edit2, Save, Move, Users, Settings } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/Select';
 import { TableStorage } from '@/api/localStorageHelpers/tables';
+import { AppContext } from '@/context/AppContext';
 
 const statusColors = {
   available: 'bg-green-500',
@@ -19,6 +20,7 @@ const statusColors = {
 };
 
 export default function FloorMap() {
+  const { isAdmin } = useContext(AppContext);
   const mapRef = useRef(null);
   const [editMode, setEditMode] = useState(false);
   const [draggedTable, setDraggedTable] = useState(null);
@@ -31,13 +33,15 @@ export default function FloorMap() {
   const [guests, setGuests] = useState([]);     // Optional: add TableStorage.getAllGuests()
 
   const refetchTables = async () => {
-    const data = await TableStorage.getAllTables();
+    const data = isAdmin
+      ? await TableStorage.getAllTablesShared()
+      : await TableStorage.getAllTables();
     setTables(data);
   };
 
   useEffect(() => {
     refetchTables();
-  }, []);
+  }, [isAdmin]);
 
   const filteredTables = sectionFilter === 'all' 
     ? tables 
@@ -62,19 +66,29 @@ export default function FloorMap() {
     const x = ((e.clientX - rect.left) / rect.width) * 100;
     const y = ((e.clientY - rect.top) / rect.height) * 100;
 
-    await TableStorage.updateTable(draggedTable.id, {
+    const nextPosition = {
       position_x: Math.max(5, Math.min(95, x)),
       position_y: Math.max(5, Math.min(95, y)),
-    });
+    };
+    if (isAdmin) {
+      await TableStorage.updateTableShared(draggedTable.id, nextPosition);
+    } else {
+      await TableStorage.updateTable(draggedTable.id, nextPosition);
+    }
 
     await refetchTables();
     setDraggedTable(null);
   };
 
   const handleSaveTable = async (tableData) => {
-    const savedTable = tableData.id
-      ? await TableStorage.updateTable(tableData.id, tableData)
-      : await TableStorage.createTable({ ...tableData, position_x: 50, position_y: 50 });
+    let savedTable;
+    if (tableData.id) {
+      savedTable = isAdmin
+        ? await TableStorage.updateTableShared(tableData.id, tableData)
+        : await TableStorage.updateTable(tableData.id, tableData);
+    } else {
+      savedTable = await TableStorage.createTable({ ...tableData, position_x: 50, position_y: 50 });
+    }
 
     await refetchTables();
     return savedTable;

@@ -19,6 +19,7 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   if (request.method !== 'GET') return;
   if (!request.url.startsWith('http')) return;
+  if (request.url.includes('supabase.co')) return;
 
   // For navigation requests, serve cached index.html fallback
   if (request.mode === 'navigate') {
