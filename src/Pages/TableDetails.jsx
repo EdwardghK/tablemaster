@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useRef } from 'react';
 import { cn } from '@/utils';
 import BottomNav from '@/components/common/BottomNav';
 import CategoryTabs from '@/components/menu/CategoryTabs';
@@ -49,6 +49,8 @@ export default function TableDetails() {
   const [editGuestModal, setEditGuestModal] = useState({ open: false, guest: null });
   const [editTableModal, setEditTableModal] = useState(false);
   const [editOrderModal, setEditOrderModal] = useState({ open: false, item: null, notes: '', mods: [] });
+  const [isAddingGuest, setIsAddingGuest] = useState(false);
+  const addGuestLock = useRef(false);
   const courseOptions = ['Unassigned', 'Course 1', 'Course 2', 'Course 3', 'Course 4', 'Course 5'];
 
   // Load table info
@@ -220,14 +222,31 @@ export default function TableDetails() {
   };
 
   const handleAddGuest = async () => {
-    const newGuestNumber = guests.length + 1;
-    const newGuest = await GuestStorage.createGuest({
-      table_id: tableId,
-      guest_number: newGuestNumber,
-    });
-    await TableStorage.updateTable(tableId, { guest_count: newGuestNumber, status: 'occupied' });
-    setGuests(prev => [...prev, newGuest]);
-    setTable(await TableStorage.getTable(tableId));
+    if (addGuestLock.current) return;
+    addGuestLock.current = true;
+    setIsAddingGuest(true);
+    try {
+      const nextNumber = Math.max(0, ...guests.map((g) => Number(g.guest_number) || 0)) + 1;
+      const newGuest = await GuestStorage.createGuest({
+        table_id: tableId,
+        guest_number: nextNumber,
+      });
+      if (isAdmin) {
+        await TableStorage.updateTableShared(tableId, { guest_count: nextNumber, status: 'occupied' });
+        setTable(await TableStorage.getTableShared(tableId));
+      } else {
+        await TableStorage.updateTable(tableId, { guest_count: nextNumber, status: 'occupied' });
+        setTable(await TableStorage.getTable(tableId));
+      }
+      const refreshedGuests = isAdmin
+        ? await GuestStorageShared.getGuests(tableId)
+        : await GuestStorage.getGuests(tableId);
+      setGuests(refreshedGuests);
+      setActiveGuestId(newGuest.id);
+    } finally {
+      addGuestLock.current = false;
+      setIsAddingGuest(false);
+    }
   };
 
   const handleSaveGuest = async (guestData) => {
@@ -388,7 +407,7 @@ export default function TableDetails() {
         </div>
 
         {/* Sticky guest picker */}
-        <div className="w-full sticky top-[56px] z-40 px-4 bg-stone-50 dark:bg-stone-900 border-b border-stone-200 dark:border-stone-800 py-0">
+        <div className="w-full sticky top-[56px] z-40 px-4 bg-stone-50 dark:bg-stone-900 border-b border-stone-200 dark:border-stone-800 py-0 -mt-6">
           {(() => {
             const sortedGuests = [...guests].sort((a, b) => (a.guest_number || 0) - (b.guest_number || 0));
             const currentIndex = sortedGuests.findIndex(g => g.id === activeGuestId);
@@ -441,7 +460,8 @@ export default function TableDetails() {
                   type="button"
                   size="icon"
                   onClick={handleAddGuest}
-                  className="shrink-0 rounded-full bg-amber-700 hover:bg-amber-800 text-white w-10 h-10"
+                  disabled={isAddingGuest}
+                  className="shrink-0 rounded-full bg-amber-700 hover:bg-amber-800 text-white w-10 h-10 disabled:opacity-60 disabled:cursor-not-allowed"
                   aria-label="Add guest"
                 >
                   <Plus className="h-5 w-5" />
