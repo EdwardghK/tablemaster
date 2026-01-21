@@ -19,6 +19,7 @@ export default function GuestPillScroller({
   const velocityHistory = React.useRef([]);
   const momentumFrame = React.useRef(0);
   const snapTimeoutRef = React.useRef(0);
+  const scrollEndTimeoutRef = React.useRef(0);
   const activePointerId = React.useRef(null);
 
   const itemsWithKeys = React.useMemo(
@@ -138,6 +139,7 @@ export default function GuestPillScroller({
   const handlePointerDown = React.useCallback(
     (e) => {
       if (disabled) return;
+      if (e.pointerType !== 'mouse') return;
       if (momentumFrame.current) cancelAnimationFrame(momentumFrame.current);
       isDragging.current = true;
       activePointerId.current = e.pointerId;
@@ -192,10 +194,19 @@ export default function GuestPillScroller({
     [disabled, onChange, setScrollToValue]
   );
 
+  const handleScroll = React.useCallback(() => {
+    if (disabled || isDragging.current) return;
+    if (scrollEndTimeoutRef.current) clearTimeout(scrollEndTimeoutRef.current);
+    scrollEndTimeoutRef.current = window.setTimeout(() => {
+      snapToNearest();
+    }, 120);
+  }, [disabled, snapToNearest]);
+
   React.useEffect(
     () => () => {
       if (momentumFrame.current) cancelAnimationFrame(momentumFrame.current);
       if (snapTimeoutRef.current) clearTimeout(snapTimeoutRef.current);
+      if (scrollEndTimeoutRef.current) clearTimeout(scrollEndTimeoutRef.current);
     },
     []
   );
@@ -236,6 +247,7 @@ export default function GuestPillScroller({
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerCancel}
+        onScroll={handleScroll}
       >
         {itemsWithKeys.map((item) => {
           const isSelected = `${item.id}` === `${value}`;
