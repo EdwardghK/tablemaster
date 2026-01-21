@@ -26,22 +26,30 @@ export default function Tables() {
 
   // Load tables, guests, orders from localStorage
   useEffect(() => {
+    let mounted = true;
+    let intervalId = null;
     const load = async () => {
       try {
-        setLoading(true);
+        if (mounted) setLoading(true);
         const [t, g, o] = await Promise.all([
           isAdmin ? TableStorage.getAllTablesShared() : TableStorage.getAllTables(),
           isAdmin ? GuestStorageShared.getAllGuestsShared() : GuestStorage.getAllGuests(),
           isAdmin ? OrderStorageShared.getAllOrderItems() : OrderStorage.getAllOrderItems(),
         ]);
+        if (!mounted) return;
         setTables(t);
         setGuests(g);
         setOrderItems(o);
       } finally {
-        setLoading(false);
+        if (mounted) setLoading(false);
       }
     };
     load();
+    intervalId = setInterval(load, 3000);
+    return () => {
+      mounted = false;
+      if (intervalId) clearInterval(intervalId);
+    };
   }, [isAdmin]);
 
   const filteredTables = tables.filter(table => {
