@@ -388,7 +388,7 @@ export default function TableDetails() {
         </div>
 
         {/* Sticky guest picker */}
-        <div className="w-full sticky top-[56px] z-40 px-4 bg-stone-50 dark:bg-stone-900 border-b border-stone-200 dark:border-stone-800 py-1">
+        <div className="w-full sticky top-[56px] z-40 px-4 bg-stone-50 dark:bg-stone-900 border-b border-stone-200 dark:border-stone-800 py-0">
           {(() => {
             const sortedGuests = [...guests].sort((a, b) => (a.guest_number || 0) - (b.guest_number || 0));
             const currentIndex = sortedGuests.findIndex(g => g.id === activeGuestId);
