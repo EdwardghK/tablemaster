@@ -79,3 +79,29 @@ button, input, select, textarea {
   right: 0;
   background: linear-gradient(to left, var(--background, white), transparent);
 }
+
+/* Horizontal wheel: rotate the vertical wheel */
+.wheel-horizontal {
+  position: relative;
+  height: 64px;
+}
+
+.wheel-horizontal [data-rwp] {
+  transform: rotate(-90deg);
+  transform-origin: center;
+}
+
+.wheel-horizontal [data-rwp-option] {
+  transform: rotate(90deg);
+  transform-origin: center;
+}
+
+.wheel-horizontal [data-rwp-highlight-item] {
+  transform: rotate(90deg);
+  transform-origin: center;
+}
+
+.wheel-horizontal [data-rwp-highlight-wrapper] {
+  transform: rotate(90deg);
+  transform-origin: center;
+}

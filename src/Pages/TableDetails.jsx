@@ -405,7 +405,7 @@ export default function TableDetails() {
                 <div className="flex-1 min-w-0">
                   <div className="relative rounded-2xl border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 px-2 py-1.5">
                     {sortedGuests.length > 0 ? (
-                      <WheelPickerWrapper className="relative">
+                      <WheelPickerWrapper className="relative wheel-horizontal">
                         <WheelPicker
                           value={activeGuestId || sortedGuests[0]?.id}
                           onValueChange={(guestId) => setActiveGuestId(guestId)}
