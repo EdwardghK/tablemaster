@@ -15,14 +15,18 @@ async function requireUser() {
   throw new Error("Must be signed in");
 }
 
+function applyOwnerFilter(query, user) {
+  if (user?.email) {
+    return query.or(`owner_id.eq.${user.id},owner_email.eq.${user.email}`);
+  }
+  return query.eq("owner_id", user.id);
+}
+
 export const TableStorage = {
   async getAllTables() {
     const user = await requireUser();
-    const { data, error } = await supabase
-      .from("tables")
-      .select("*")
-      .eq("owner_id", user.id)
-      .order("created_at", { ascending: true });
+    const base = supabase.from("tables").select("*").order("created_at", { ascending: true });
+    const { data, error } = await applyOwnerFilter(base, user);
     if (error) throw error;
     return data || [];
   },
@@ -39,12 +43,8 @@ export const TableStorage = {
 
   async getTable(id) {
     const user = await requireUser();
-    const { data, error } = await supabase
-      .from("tables")
-      .select("*")
-      .eq("id", id)
-      .eq("owner_id", user.id)
-      .maybeSingle();
+    const base = supabase.from("tables").select("*").eq("id", id);
+    const { data, error } = await applyOwnerFilter(base, user).maybeSingle();
     if (error) throw error;
     return data;
   },
@@ -89,13 +89,8 @@ export const TableStorage = {
       owner_phone: user.user_metadata?.phone || null,
       owner_name: user.user_metadata?.full_name || user.email || null,
     };
-    const { data: row, error } = await supabase
-      .from("tables")
-      .update(payload)
-      .eq("id", id)
-      .eq("owner_id", user.id)
-      .select()
-      .single();
+    const base = supabase.from("tables").update(payload).eq("id", id);
+    const { data: row, error } = await applyOwnerFilter(base, user).select().single();
     if (error) throw error;
     return row;
   },
@@ -114,11 +109,8 @@ export const TableStorage = {
 
   async deleteTable(id) {
     const user = await requireUser();
-    const { error } = await supabase
-      .from("tables")
-      .delete()
-      .eq("id", id)
-      .eq("owner_id", user.id);
+    const base = supabase.from("tables").delete().eq("id", id);
+    const { error } = await applyOwnerFilter(base, user);
     if (error) throw error;
     return true;
   },
