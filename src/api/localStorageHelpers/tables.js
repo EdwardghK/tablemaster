@@ -1,5 +1,10 @@
 import { supabase } from "@/supabase";
 
+function normalizeEmail(email) {
+  if (!email || typeof email !== "string") return null;
+  return email.trim().toLowerCase();
+}
+
 async function requireUser() {
   const { data: sessionData } = await supabase.auth.getSession();
   if (sessionData?.session?.user) return sessionData.session.user;
@@ -16,8 +21,9 @@ async function requireUser() {
 }
 
 function applyOwnerFilter(query, user) {
-  if (user?.email) {
-    return query.or(`owner_id.eq.${user.id},owner_email.eq.${user.email}`);
+  const normalizedEmail = normalizeEmail(user?.email);
+  if (normalizedEmail) {
+    return query.or(`owner_id.eq.${user.id},owner_email.ilike.${normalizedEmail}`);
   }
   return query.eq("owner_id", user.id);
 }
@@ -67,7 +73,7 @@ export const TableStorage = {
       ...data,
       table_number: data.table_number.trim(),
       owner_id: user.id,
-      owner_email: user.email || null,
+      owner_email: normalizeEmail(user.email) || null,
       owner_phone: user.user_metadata?.phone || null,
       owner_name: user.user_metadata?.full_name || user.email || null,
     };
@@ -85,7 +91,7 @@ export const TableStorage = {
     const payload = {
       ...data,
       owner_id: user.id,
-      owner_email: user.email || null,
+      owner_email: normalizeEmail(user.email) || null,
       owner_phone: user.user_metadata?.phone || null,
       owner_name: user.user_metadata?.full_name || user.email || null,
     };
