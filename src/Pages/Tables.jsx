@@ -23,6 +23,7 @@ export default function Tables() {
   const [guests, setGuests] = useState([]);
   const [orderItems, setOrderItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
 
   // Load tables, guests, orders from localStorage
   useEffect(() => {
@@ -37,10 +38,11 @@ export default function Tables() {
             setGuests([]);
             setOrderItems([]);
             setLoading(false);
+            setInitialLoadComplete(true);
           }
           return;
         }
-        if (mounted) setLoading(true);
+        if (mounted && !initialLoadComplete) setLoading(true);
         const [t, g, o] = await Promise.all([
           isAdmin ? TableStorage.getAllTablesShared() : TableStorage.getAllTables(),
           isAdmin ? GuestStorageShared.getAllGuestsShared() : GuestStorage.getAllGuests(),
@@ -53,13 +55,18 @@ export default function Tables() {
       } catch (err) {
         console.error("Failed to load tables:", err);
         if (mounted) {
-          setTables([]);
-          setGuests([]);
-          setOrderItems([]);
-          toast.error(err?.message || "Could not load tables");
+          if (!initialLoadComplete) {
+            setTables([]);
+            setGuests([]);
+            setOrderItems([]);
+            toast.error(err?.message || "Could not load tables");
+          }
         }
       } finally {
-        if (mounted) setLoading(false);
+        if (mounted) {
+          setLoading(false);
+          if (!initialLoadComplete) setInitialLoadComplete(true);
+        }
       }
     };
     load();
@@ -68,7 +75,7 @@ export default function Tables() {
       mounted = false;
       if (intervalId) clearInterval(intervalId);
     };
-  }, [isAdmin, accessLoading, user?.id]);
+  }, [isAdmin, accessLoading, user?.id, initialLoadComplete]);
 
   const filteredTables = tables.filter(table => {
     const matchesSearch = table.table_number?.toString().toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -188,7 +195,7 @@ export default function Tables() {
 
       {/* Tables Grid */}
       <div className="p-4 space-y-6">
-        {loading ? (
+        {loading && tables.length === 0 ? (
           <div className="grid grid-cols-2 gap-3">
             {[...Array(6)].map((_, i) => (
               <Skeleton key={i} className="h-40 rounded-2xl" />
