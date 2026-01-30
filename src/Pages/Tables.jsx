@@ -16,7 +16,7 @@ import { AppContext } from '@/context/AppContext';
 import { toast } from 'sonner';
 
 export default function Tables() {
-  const { isAdmin } = useContext(AppContext);
+  const { isAdmin, accessLoading, user } = useContext(AppContext);
   const [searchQuery, setSearchQuery] = useState('');
   const [editModal, setEditModal] = useState({ open: false, table: null });
   const [tables, setTables] = useState([]);
@@ -30,6 +30,16 @@ export default function Tables() {
     let intervalId = null;
     const load = async () => {
       try {
+        if (accessLoading) return;
+        if (!isAdmin && !user?.id) {
+          if (mounted) {
+            setTables([]);
+            setGuests([]);
+            setOrderItems([]);
+            setLoading(false);
+          }
+          return;
+        }
         if (mounted) setLoading(true);
         const [t, g, o] = await Promise.all([
           isAdmin ? TableStorage.getAllTablesShared() : TableStorage.getAllTables(),
@@ -40,6 +50,14 @@ export default function Tables() {
         setTables(t);
         setGuests(g);
         setOrderItems(o);
+      } catch (err) {
+        console.error("Failed to load tables:", err);
+        if (mounted) {
+          setTables([]);
+          setGuests([]);
+          setOrderItems([]);
+          toast.error(err?.message || "Could not load tables");
+        }
       } finally {
         if (mounted) setLoading(false);
       }
@@ -50,7 +68,7 @@ export default function Tables() {
       mounted = false;
       if (intervalId) clearInterval(intervalId);
     };
-  }, [isAdmin]);
+  }, [isAdmin, accessLoading, user?.id]);
 
   const filteredTables = tables.filter(table => {
     const matchesSearch = table.table_number?.toString().toLowerCase().includes(searchQuery.toLowerCase()) ||

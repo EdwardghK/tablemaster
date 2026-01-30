@@ -44,3 +44,6 @@ function WheelPicker(
 }
 
 export { WheelPicker, WheelPickerWrapper };
+
+
+//in tables page, while creating new table, when click on "table Number/Name", can you make it pop up with the number pad first
