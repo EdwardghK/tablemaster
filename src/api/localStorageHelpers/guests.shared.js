@@ -18,4 +18,9 @@ export const GuestStorageShared = {
     if (error) throw error;
     return data || [];
   },
+
+  // Backwards-compatible alias used by some pages
+  async getAllGuestsShared() {
+    return await GuestStorageShared.getAllGuests();
+  },
 };
